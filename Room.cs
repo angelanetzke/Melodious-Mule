@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using System;
 using System.Collections.Generic;
 
 namespace RogueClone
@@ -14,7 +15,6 @@ namespace RogueClone
 		private int maxY;
 		private int centerX;
 		private int centerY;
-
 		private bool isVisited;
 		private readonly Random RNG = new();
 
@@ -133,6 +133,13 @@ namespace RogueClone
 		public int GetCenterY()
 		{
 			return centerY;
+		}
+
+		public Point GetRandomPointInside()
+		{
+			int x = RNG.Next(minX + 1, maxX);
+			int y = RNG.Next(minY + 1, maxY);
+			return new Point(x, y);
 		}
 
 	}
