@@ -55,6 +55,19 @@ namespace RogueClone
 				(int)Math.Round(GetSize().Y));
 		}
 
+		public BoundingBox GetBoundingBox()
+		{
+			return new BoundingBox(
+				new Vector3(
+					GetPosition().X,
+					GetPosition().Y,
+					0),
+				new Vector3(
+					GetPosition().X + GetSize().X,
+					GetPosition().Y + GetSize().Y,
+					0));
+		}
+
 		public bool CanMoveLeft(float movement, List<GameObject> obstacles)
 		{
 			var testRectangle = new Rectangle(

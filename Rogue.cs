@@ -17,6 +17,8 @@ namespace RogueClone
 		private Texture2D cornerTexture;
 		private Texture2D wallTexture;
 		private Texture2D heroTexture;
+		private Texture2D crosshairGreenTexture;
+		private Texture2D crosshairRedTexture;
 		private readonly int TILE_SIZE = 16;
 		private readonly int[] centerX = new int[] { 20, 70, 120, 20, 70, 120, 20, 70, 120 };
 		private readonly int[] centerY = new int[] { 20, 20, 20, 70, 70, 70, 120, 120, 120 };
@@ -29,6 +31,10 @@ namespace RogueClone
 		private readonly List<Room> rooms = new();
 		private readonly int ROOM_COUNT = 9;
 		private readonly Hero theHero = new(0, 0);
+		private readonly int CURSOR_SIZE = 32;
+		bool lastCanAttack = false;
+		private enum GameState { PREGAME, PLAYING };
+		private GameState currentGameState;
 
 		public Rogue()
 		{
@@ -43,10 +49,11 @@ namespace RogueClone
 
 		protected override void Initialize()
 		{
+			currentGameState = GameState.PREGAME;
 			for (int i = 0; i < ROOM_COUNT; i++)
 			{
 				rooms.Add(new Room());
-			}			
+			}
 			rooms[0].SetNeighbor(rooms[1], Room.Direction.E);
 			rooms[0].SetNeighbor(rooms[3], Room.Direction.S);
 			rooms[1].SetNeighbor(rooms[0], Room.Direction.W);
@@ -81,6 +88,8 @@ namespace RogueClone
 			wallTexture = Content.Load<Texture2D>("wall");
 			heroTexture = Content.Load<Texture2D>("hero");
 			theHero.SetTexture(heroTexture);
+			crosshairGreenTexture = Content.Load<Texture2D>("crosshair-green");
+			crosshairRedTexture = Content.Load<Texture2D>("crosshair-red");
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -92,6 +101,17 @@ namespace RogueClone
 			{
 				GenerateMap();
 			}
+			if (currentGameState == GameState.PLAYING)
+			{
+				MoveHero(keyState, gameTime);
+				Attack();
+			}
+			base.Update(gameTime);
+
+		}
+
+		private void MoveHero(KeyboardState keyState, GameTime gameTime)
+		{
 			theHero.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 			theHero.SetCurrentAnimation(Hero.AnimType.IDLE);
 			float movement = (float)gameTime.ElapsedGameTime.TotalSeconds * SPEED;
@@ -119,7 +139,45 @@ namespace RogueClone
 				theHero.SetPosition(theHero.GetPosition().X, theHero.GetPosition().Y + movement);
 				yTranslation -= movement;
 			}
-			base.Update(gameTime);
+		}
+
+		private void Attack()
+		{
+			var mouseState = Mouse.GetState();
+			var transformMatrix = Matrix.Invert(Matrix.CreateTranslation(xTranslation, yTranslation, 0));
+			var worldMousePosition = 
+				Vector2.Transform(new Vector2(mouseState.X, mouseState.Y), transformMatrix);
+			var mouseX = worldMousePosition.X;
+			var mouseY = worldMousePosition.Y;
+			var heroX = theHero.GetPosition().X + theHero.GetSize().X / 2;
+			var heroY = theHero.GetPosition().Y + theHero.GetSize().Y / 2;
+			var distanceToMouse = Vector2.Distance(new Vector2(heroX, heroY), new Vector2(mouseX, mouseY));
+			var attackRay = new Ray(
+				new Vector3(heroX, heroY, 0),
+				new Vector3(mouseX - heroX, mouseY - heroY, 0));
+			bool canAttack = true;
+			foreach (GameObject thisWall in walls)
+			{
+				float? hit = attackRay.Intersects(thisWall.GetBoundingBox());
+				if (hit != null 
+					&& Vector2.Distance(thisWall.GetPosition(), theHero.GetPosition()) < distanceToMouse)
+				{
+					canAttack = false;
+				}
+			}
+			if (canAttack && !lastCanAttack)
+			{
+				Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairGreenTexture, CURSOR_SIZE, CURSOR_SIZE));
+			}
+			else if (!canAttack && lastCanAttack)
+			{
+				Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
+			}
+			lastCanAttack = canAttack;
+			if (mouseState.LeftButton == ButtonState.Pressed)
+			{
+
+			}
 		}
 
 		protected override void Draw(GameTime gameTime)
@@ -147,8 +205,9 @@ namespace RogueClone
 			var roomSelect = RNG.Next(rooms.Count);
 			theHero.SetPosition(centerX[roomSelect] * TILE_SIZE, centerY[roomSelect] * TILE_SIZE);
 			xTranslation = _graphics.PreferredBackBufferWidth / 2 - theHero.GetPosition().X - theHero.GetSize().X / 2;
-			yTranslation = _graphics.PreferredBackBufferHeight/ 2 - theHero.GetPosition().Y - theHero.GetSize().Y / 2;
-			
+			yTranslation = _graphics.PreferredBackBufferHeight / 2 - theHero.GetPosition().Y - theHero.GetSize().Y / 2;
+			currentGameState = GameState.PLAYING;
+			Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
 		}
 
 		private void ConnectMap()
@@ -182,7 +241,7 @@ namespace RogueClone
 				GenerateCorners(rooms[i]);
 				GenerateHorizontalWalls(rooms[i]);
 				GenerateVerticalWalls(rooms[i]);
-			}			
+			}
 		}
 
 		private void GenerateCorners(Room theRoom)
@@ -349,7 +408,7 @@ namespace RogueClone
 					}
 				}
 			}
-			
+
 		}
 
 	}
