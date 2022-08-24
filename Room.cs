@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace RogueClone
+namespace MelodiousMule
 {
 	internal class Room
 	{

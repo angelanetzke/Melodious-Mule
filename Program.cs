@@ -1,3 +1,3 @@
 ﻿
-using var game = new RogueClone.Rogue();
+using var game = new MelodiousMule.MelodiousMule();
 game.Run();

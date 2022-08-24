@@ -3,14 +3,14 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace RogueClone
+namespace MelodiousMule
 {
 	internal class Zombie : GameObject
 	{
 		public enum Difficulty { EASY, MEDIUM, HARD };
 		private readonly Difficulty difficulty;
 		private readonly int[] SPEED = new int[] { 50, 100, 150 };
-		private readonly int[] VISION = new int[] { 100, 200, 300 };
+		private readonly int[] VISION = new int[] { 200, 250, 300 };
 		
 		public enum AnimType { MOVE_N, MOVE_S, MOVE_W, MOVE_E, IDLE };
 		private AnimType currentAnimation = AnimType.IDLE;

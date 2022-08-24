@@ -5,15 +5,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RogueClone
+namespace MelodiousMule
 {
-	public class Rogue : Game
+	public class MelodiousMule : Game
 	{
 		private GraphicsDeviceManager _graphics;
 		private SpriteBatch _spriteBatch;
 		private List<GameObject> allGameObjects = new();
-		private List<GameObject> walls = new();
-		private List<GameObject> zombies = new();
+		private List<Wall> walls = new();
+		private List<Zombie> zombies = new();
+		private List<Button> buttons = new();
 		private readonly Random RNG = new();
 		private Texture2D cornerTexture;
 		private Texture2D wallTexture;
@@ -24,6 +25,7 @@ namespace RogueClone
 		private Texture2D zombieMediumTexture;
 		private Texture2D zombieHardTexture;
 		private Texture2D groundTexture;
+		private Texture2D buttonTexture;
 		private readonly int TILE_SIZE = 16;
 		private readonly int[] centerX = new int[] { 20, 70, 120, 20, 70, 120, 20, 70, 120 };
 		private readonly int[] centerY = new int[] { 20, 20, 20, 70, 70, 70, 120, 120, 120 };
@@ -42,20 +44,36 @@ namespace RogueClone
 		private GameState currentGameState;
 		private int currentLevel = 0;
 		private readonly int LEVEL_COUNT = 10;
-		private readonly int[] zombieCount = new int[] { 3 };
 		private readonly int[][] zombieDistribution = new int[][]
 			{
-				new int[] { 100, 0, 0}
+				new int[] { 3, 0, 0},
+				new int[] { 3, 1, 0},
+				new int[] { 3, 2, 0},
+				new int[] { 3, 3, 0},
+				new int[] { 0, 5, 0},
+				new int[] { 0, 6, 0},
+				new int[] { 0, 7, 0},
+				new int[] { 0, 5, 2},
+				new int[] { 0, 5, 3},
+				new int[] { 0, 0, 8}
 			};
+		private readonly string startScreenText =
+			  "All your life you've heard of the legend of the Melodious Mule,\n"
+			+ " an extraordinary creature who could play a bugle. You always\n"
+			+ " wondered whether the legend was true. You set out on a quest\n"
+			+ "        to find the bugle of the Melodious Mule.";
+		private SpriteFont font;
 
-		public Rogue()
+		public MelodiousMule()
 		{
 			_graphics = new GraphicsDeviceManager(this);
 			Content.RootDirectory = "Content";
 			IsMouseVisible = true;
 			_graphics.IsFullScreen = false;
-			_graphics.PreferredBackBufferWidth = 1000;
-			_graphics.PreferredBackBufferHeight = 600;
+			_graphics.PreferredBackBufferWidth = 
+				GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width - 50;
+			_graphics.PreferredBackBufferHeight = 
+				GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height - 100;
 			_graphics.ApplyChanges();
 		}
 
@@ -96,16 +114,18 @@ namespace RogueClone
 		protected override void LoadContent()
 		{
 			_spriteBatch = new SpriteBatch(GraphicsDevice);
-			cornerTexture = Content.Load<Texture2D>("corner");
-			wallTexture = Content.Load<Texture2D>("wall");
-			heroTexture = Content.Load<Texture2D>("hero");
+			cornerTexture = Content.Load<Texture2D>(@"Level\corner");
+			wallTexture = Content.Load<Texture2D>(@"Level\wall");
+			heroTexture = Content.Load<Texture2D>(@"Level\hero");
 			theHero.SetTexture(heroTexture);
-			crosshairGreenTexture = Content.Load<Texture2D>("crosshair-green");
-			crosshairRedTexture = Content.Load<Texture2D>("crosshair-red");
-			zombieEasyTexture = Content.Load<Texture2D>("zombie-easy");
-			zombieMediumTexture = Content.Load<Texture2D>("zombie-medium");
-			zombieHardTexture = Content.Load<Texture2D>("zombie-hard");
-			groundTexture = Content.Load<Texture2D>("ground");
+			crosshairGreenTexture = Content.Load<Texture2D>(@"Level\crosshair-green");
+			crosshairRedTexture = Content.Load<Texture2D>(@"Level\crosshair-red");
+			zombieEasyTexture = Content.Load<Texture2D>(@"Level\zombie-easy");
+			zombieMediumTexture = Content.Load<Texture2D>(@"Level\zombie-medium");
+			zombieHardTexture = Content.Load<Texture2D>(@"Level\zombie-hard");
+			groundTexture = Content.Load<Texture2D>(@"Level\ground");
+			font = Content.Load<SpriteFont>(@"UI\Kenney_Pixel");
+			buttonTexture = Content.Load<Texture2D>(@"UI\buttonshape");
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -113,28 +133,48 @@ namespace RogueClone
 			if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
 				Exit();
 			var keyState = Keyboard.GetState();
-			if (keyState.IsKeyDown(Keys.M) && allGameObjects.Count == 0)
+			var mouseState = Mouse.GetState();
+			if (currentGameState == GameState.PREGAME)
 			{
-				GenerateMap();
+				if (allGameObjects.Count == 0)
+				{
+					GenerateStartScreen();
+				}				
+				foreach (Button thisButton in buttons)
+				{
+					if (thisButton.Update(mouseState) && thisButton.GetText() == "Play")
+					{
+						allGameObjects = new();
+						currentGameState = GameState.PLAYING;
+					}
+				}
 			}
 			if (currentGameState == GameState.PLAYING)
 			{
-				var newTranslation = theHero.Update(keyState, walls, gameTime, xTranslation, yTranslation);
+				if (allGameObjects.Count == 0)
+				{
+					GenerateMap();
+				}
+				var newTranslation =
+					theHero.Update(
+						keyState,
+						walls.ConvertAll(x => (GameObject)x),
+						gameTime,
+						xTranslation,
+						yTranslation);
 				xTranslation = newTranslation.X;
 				yTranslation = newTranslation.Y;
-				Attack();
+				Attack(mouseState);
 				foreach (Zombie thisZombie in zombies)
 				{
-					thisZombie.Update(theHero, walls, gameTime);
+					thisZombie.Update(theHero, walls.ConvertAll(x => (GameObject)x), gameTime);
 				}
 			}
 			base.Update(gameTime);
-
 		}
 
-		private void Attack()
+		private void Attack(MouseState mouseState)
 		{
-			var mouseState = Mouse.GetState();
 			var transformMatrix = Matrix.Invert(Matrix.CreateTranslation(xTranslation, yTranslation, 0));
 			var worldMousePosition =
 				Vector2.Transform(new Vector2(mouseState.X, mouseState.Y), transformMatrix);
@@ -171,23 +211,8 @@ namespace RogueClone
 			}
 		}
 
-		protected override void Draw(GameTime gameTime)
-		{
-			GraphicsDevice.Clear(Color.Black);
-			_spriteBatch.Begin(
-				sortMode: SpriteSortMode.FrontToBack,
-				transformMatrix: Matrix.CreateTranslation(xTranslation, yTranslation, 0));
-			foreach (GameObject thisGameObject in allGameObjects)
-			{
-				thisGameObject.Draw(_spriteBatch);
-			}
-			_spriteBatch.End();
-			base.Draw(gameTime);
-		}
-
 		private void GenerateMap()
 		{
-			allGameObjects = new();
 			walls = new();
 			zombies = new();
 			allGameObjects.Add(theHero);
@@ -492,6 +517,46 @@ namespace RogueClone
 				(Zombie.Difficulty)2);
 			zombie.SetTexture(zombieHardTexture);
 			zombies.Add(zombie);
+		}
+
+		private void GenerateStartScreen()
+		{
+			buttons = new();
+			var startButton = new Button(100, 400, "Play", font);
+			startButton.SetTexture(buttonTexture);
+			buttons.Add(startButton);
+			allGameObjects.Add(startButton);
+		}
+
+		protected override void Draw(GameTime gameTime)
+		{
+			GraphicsDevice.Clear(Color.Black);
+			if (currentGameState == GameState.PREGAME)
+			{
+				_spriteBatch.Begin();
+				_spriteBatch.DrawString(
+					font,
+					startScreenText,
+					new Vector2((_graphics.PreferredBackBufferWidth - font.MeasureString(startScreenText).X) / 2, 50),
+					Color.White);
+				foreach (GameObject thisGameObject in allGameObjects)
+				{
+					thisGameObject.Draw(_spriteBatch);
+				}
+				_spriteBatch.End();
+			}
+			else if (currentGameState == GameState.PLAYING)
+			{
+				_spriteBatch.Begin(
+					sortMode: SpriteSortMode.FrontToBack,
+					transformMatrix: Matrix.CreateTranslation(xTranslation, yTranslation, 0));
+				foreach (GameObject thisGameObject in allGameObjects)
+				{
+					thisGameObject.Draw(_spriteBatch);
+				}
+				_spriteBatch.End();
+			}
+			base.Draw(gameTime);
 		}
 
 	}

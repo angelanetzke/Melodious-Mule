@@ -1,6 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 
-namespace RogueClone
+namespace MelodiousMule
 {
 	internal class Animation
 	{
