@@ -135,10 +135,10 @@ namespace RogueClone
 			return centerY;
 		}
 
-		public Point GetRandomPointInside()
+		public Point GetRandomPointInside(int buffer = 0)
 		{
-			int x = RNG.Next(minX + 1, maxX);
-			int y = RNG.Next(minY + 1, maxY);
+			int x = RNG.Next(minX + 1 + buffer, maxX - buffer);
+			int y = RNG.Next(minY + 1 + buffer, maxY - buffer);
 			return new Point(x, y);
 		}
 

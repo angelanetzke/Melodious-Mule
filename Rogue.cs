@@ -13,12 +13,17 @@ namespace RogueClone
 		private SpriteBatch _spriteBatch;
 		private List<GameObject> allGameObjects = new();
 		private List<GameObject> walls = new();
+		private List<GameObject> zombies = new();
 		private readonly Random RNG = new();
 		private Texture2D cornerTexture;
 		private Texture2D wallTexture;
 		private Texture2D heroTexture;
 		private Texture2D crosshairGreenTexture;
 		private Texture2D crosshairRedTexture;
+		private Texture2D zombieEasyTexture;
+		private Texture2D zombieMediumTexture;
+		private Texture2D zombieHardTexture;
+		private Texture2D groundTexture;
 		private readonly int TILE_SIZE = 16;
 		private readonly int[] centerX = new int[] { 20, 70, 120, 20, 70, 120, 20, 70, 120 };
 		private readonly int[] centerY = new int[] { 20, 20, 20, 70, 70, 70, 120, 120, 120 };
@@ -27,14 +32,21 @@ namespace RogueClone
 		private readonly int corridorWidth = 3;
 		private float xTranslation;
 		private float yTranslation;
-		private readonly float SPEED = 200;
 		private readonly List<Room> rooms = new();
 		private readonly int ROOM_COUNT = 9;
 		private readonly Hero theHero = new(0, 0);
+		private int heroStartRoom = 0;
 		private readonly int CURSOR_SIZE = 32;
 		bool lastCanAttack = false;
 		private enum GameState { PREGAME, PLAYING };
 		private GameState currentGameState;
+		private int currentLevel = 0;
+		private readonly int LEVEL_COUNT = 10;
+		private readonly int[] zombieCount = new int[] { 3 };
+		private readonly int[][] zombieDistribution = new int[][]
+			{
+				new int[] { 100, 0, 0}
+			};
 
 		public Rogue()
 		{
@@ -90,6 +102,10 @@ namespace RogueClone
 			theHero.SetTexture(heroTexture);
 			crosshairGreenTexture = Content.Load<Texture2D>("crosshair-green");
 			crosshairRedTexture = Content.Load<Texture2D>("crosshair-red");
+			zombieEasyTexture = Content.Load<Texture2D>("zombie-easy");
+			zombieMediumTexture = Content.Load<Texture2D>("zombie-medium");
+			zombieHardTexture = Content.Load<Texture2D>("zombie-hard");
+			groundTexture = Content.Load<Texture2D>("ground");
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -97,55 +113,30 @@ namespace RogueClone
 			if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
 				Exit();
 			var keyState = Keyboard.GetState();
-			if (keyState.IsKeyDown(Keys.M))
+			if (keyState.IsKeyDown(Keys.M) && allGameObjects.Count == 0)
 			{
 				GenerateMap();
 			}
 			if (currentGameState == GameState.PLAYING)
 			{
-				MoveHero(keyState, gameTime);
+				var newTranslation = theHero.Update(keyState, walls, gameTime, xTranslation, yTranslation);
+				xTranslation = newTranslation.X;
+				yTranslation = newTranslation.Y;
 				Attack();
+				foreach (Zombie thisZombie in zombies)
+				{
+					thisZombie.Update(theHero, walls, gameTime);
+				}
 			}
 			base.Update(gameTime);
 
-		}
-
-		private void MoveHero(KeyboardState keyState, GameTime gameTime)
-		{
-			theHero.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
-			theHero.SetCurrentAnimation(Hero.AnimType.IDLE);
-			float movement = (float)gameTime.ElapsedGameTime.TotalSeconds * SPEED;
-			if (keyState.IsKeyDown(Keys.A) && theHero.CanMoveLeft(movement, walls))
-			{
-				theHero.SetCurrentAnimation(Hero.AnimType.MOVE_W);
-				theHero.SetPosition(theHero.GetPosition().X - movement, theHero.GetPosition().Y);
-				xTranslation += movement;
-			}
-			if (keyState.IsKeyDown(Keys.D) && theHero.CanMoveRight(movement, walls))
-			{
-				theHero.SetCurrentAnimation(Hero.AnimType.MOVE_E);
-				theHero.SetPosition(theHero.GetPosition().X + movement, theHero.GetPosition().Y);
-				xTranslation -= movement;
-			}
-			if (keyState.IsKeyDown(Keys.W) && theHero.CanMoveUp(movement, walls))
-			{
-				theHero.SetCurrentAnimation(Hero.AnimType.MOVE_N);
-				theHero.SetPosition(theHero.GetPosition().X, theHero.GetPosition().Y - movement);
-				yTranslation += movement;
-			}
-			if (keyState.IsKeyDown(Keys.S) && theHero.CanMoveDown(movement, walls))
-			{
-				theHero.SetCurrentAnimation(Hero.AnimType.MOVE_S);
-				theHero.SetPosition(theHero.GetPosition().X, theHero.GetPosition().Y + movement);
-				yTranslation -= movement;
-			}
 		}
 
 		private void Attack()
 		{
 			var mouseState = Mouse.GetState();
 			var transformMatrix = Matrix.Invert(Matrix.CreateTranslation(xTranslation, yTranslation, 0));
-			var worldMousePosition = 
+			var worldMousePosition =
 				Vector2.Transform(new Vector2(mouseState.X, mouseState.Y), transformMatrix);
 			var mouseX = worldMousePosition.X;
 			var mouseY = worldMousePosition.Y;
@@ -159,7 +150,7 @@ namespace RogueClone
 			foreach (GameObject thisWall in walls)
 			{
 				float? hit = attackRay.Intersects(thisWall.GetBoundingBox());
-				if (hit != null 
+				if (hit != null
 					&& Vector2.Distance(thisWall.GetPosition(), theHero.GetPosition()) < distanceToMouse)
 				{
 					canAttack = false;
@@ -174,7 +165,7 @@ namespace RogueClone
 				Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
 			}
 			lastCanAttack = canAttack;
-			if (mouseState.LeftButton == ButtonState.Pressed)
+			if (mouseState.LeftButton == ButtonState.Pressed && canAttack)
 			{
 
 			}
@@ -183,11 +174,12 @@ namespace RogueClone
 		protected override void Draw(GameTime gameTime)
 		{
 			GraphicsDevice.Clear(Color.Black);
-			_spriteBatch.Begin(transformMatrix:
-				Matrix.CreateTranslation(xTranslation, yTranslation, 0));
-			foreach (GameObject thisAbstractGameObject in allGameObjects)
+			_spriteBatch.Begin(
+				sortMode: SpriteSortMode.FrontToBack,
+				transformMatrix: Matrix.CreateTranslation(xTranslation, yTranslation, 0));
+			foreach (GameObject thisGameObject in allGameObjects)
 			{
-				thisAbstractGameObject.Draw(_spriteBatch);
+				thisGameObject.Draw(_spriteBatch);
 			}
 			_spriteBatch.End();
 			base.Draw(gameTime);
@@ -197,6 +189,7 @@ namespace RogueClone
 		{
 			allGameObjects = new();
 			walls = new();
+			zombies = new();
 			allGameObjects.Add(theHero);
 			ConnectMap();
 			GenerateRooms();
@@ -204,10 +197,14 @@ namespace RogueClone
 			allGameObjects.AddRange(walls);
 			var roomSelect = RNG.Next(rooms.Count);
 			theHero.SetPosition(centerX[roomSelect] * TILE_SIZE, centerY[roomSelect] * TILE_SIZE);
+			heroStartRoom = roomSelect;
+			GenerateZombies();
+			allGameObjects.AddRange(zombies);
 			xTranslation = _graphics.PreferredBackBufferWidth / 2 - theHero.GetPosition().X - theHero.GetSize().X / 2;
 			yTranslation = _graphics.PreferredBackBufferHeight / 2 - theHero.GetPosition().Y - theHero.GetSize().Y / 2;
 			currentGameState = GameState.PLAYING;
 			Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
+			System.Diagnostics.Debug.WriteLine(zombies.Count);
 		}
 
 		private void ConnectMap()
@@ -241,6 +238,16 @@ namespace RogueClone
 				GenerateCorners(rooms[i]);
 				GenerateHorizontalWalls(rooms[i]);
 				GenerateVerticalWalls(rooms[i]);
+				GameObject ground;
+				for (int thisX = minX + 1; thisX < maxX; thisX++)
+				{
+					for (int thisY = minY + 1; thisY < maxY; thisY++)
+					{
+						ground = new GameObject(thisX * TILE_SIZE, thisY * TILE_SIZE);
+						ground.SetTexture(groundTexture);
+						allGameObjects.Add(ground);
+					}
+				}
 			}
 		}
 
@@ -272,6 +279,7 @@ namespace RogueClone
 			int maxY = theRoom.GetMaxY();
 			int centerX = theRoom.GetCenterX();
 			Wall wallPiece;
+			GameObject ground;
 			for (int thisX = minX + 1; thisX < maxX; thisX++)
 			{
 				if (theRoom.IsConnected(Room.Direction.N) && Math.Abs(thisX - centerX) <= corridorWidth)
@@ -287,6 +295,12 @@ namespace RogueClone
 						wallPiece = new Wall(thisX * TILE_SIZE, minY * TILE_SIZE, Wall.WallType.CORNER_SW);
 						wallPiece.SetTexture(cornerTexture);
 						walls.Add(wallPiece);
+					}
+					else
+					{
+						ground = new GameObject(thisX * TILE_SIZE, minY * TILE_SIZE);
+						ground.SetTexture(groundTexture);
+						allGameObjects.Add(ground);
 					}
 				}
 				else
@@ -309,6 +323,12 @@ namespace RogueClone
 						wallPiece.SetTexture(cornerTexture);
 						walls.Add(wallPiece);
 					}
+					else
+					{
+						ground = new GameObject(thisX * TILE_SIZE, maxY * TILE_SIZE);
+						ground.SetTexture(groundTexture);
+						allGameObjects.Add(ground);
+					}
 				}
 				else
 				{
@@ -327,6 +347,7 @@ namespace RogueClone
 			int maxY = theRoom.GetMaxY();
 			int centerY = theRoom.GetCenterY();
 			Wall wallPiece;
+			GameObject ground;
 			for (int thisY = minY + 1; thisY < maxY; thisY++)
 			{
 				if (theRoom.IsConnected(Room.Direction.W) && Math.Abs(thisY - centerY) <= corridorWidth)
@@ -342,6 +363,12 @@ namespace RogueClone
 						wallPiece = new Wall(minX * TILE_SIZE, thisY * TILE_SIZE, Wall.WallType.CORNER_NE);
 						wallPiece.SetTexture(cornerTexture);
 						walls.Add(wallPiece);
+					}
+					else
+					{
+						ground = new GameObject(minX * TILE_SIZE, thisY * TILE_SIZE);
+						ground.SetTexture(groundTexture);
+						allGameObjects.Add(ground);
 					}
 				}
 				else
@@ -364,6 +391,12 @@ namespace RogueClone
 						wallPiece.SetTexture(cornerTexture);
 						walls.Add(wallPiece);
 					}
+					else
+					{
+						ground = new GameObject(maxX * TILE_SIZE, thisY * TILE_SIZE);
+						ground.SetTexture(groundTexture);
+						allGameObjects.Add(ground);
+					}
 				}
 				else
 				{
@@ -377,6 +410,7 @@ namespace RogueClone
 		private void GenerateCorridors()
 		{
 			Wall wallPiece;
+			GameObject ground;
 			for (int i = 0; i < rooms.Count; i++)
 			{
 				if ((i % 3 == 0 || i % 3 == 1) && rooms[i].IsConnected(Room.Direction.E))
@@ -391,6 +425,12 @@ namespace RogueClone
 						wallPiece = new Wall(x * TILE_SIZE, (centerY[i] + corridorWidth) * TILE_SIZE, Wall.WallType.WALL_H);
 						wallPiece.SetTexture(wallTexture);
 						walls.Add(wallPiece);
+						for (int y = centerY[i] - corridorWidth + 1; y < centerY[i] + corridorWidth; y++)
+						{
+							ground = new GameObject(x * TILE_SIZE, y * TILE_SIZE);
+							ground.SetTexture(groundTexture);
+							allGameObjects.Add(ground);
+						}
 					}
 				}
 				if ((i / 3 == 0 || i / 3 == 1) && rooms[i].IsConnected(Room.Direction.S))
@@ -405,10 +445,53 @@ namespace RogueClone
 						wallPiece = new Wall((centerX[i] + corridorWidth) * TILE_SIZE, y * TILE_SIZE, Wall.WallType.WALL_V);
 						wallPiece.SetTexture(wallTexture);
 						walls.Add(wallPiece);
+						for (int x = centerX[i] - corridorWidth + 1; x < centerX[i] + corridorWidth; x++)
+						{
+							ground = new GameObject(x * TILE_SIZE, y * TILE_SIZE);
+							ground.SetTexture(groundTexture);
+							allGameObjects.Add(ground);
+						}
 					}
 				}
 			}
+		}
 
+		private void GenerateZombies()
+		{
+			Zombie zombie;
+			var roomSelect = heroStartRoom;
+			Point zombieLocation;
+			while (roomSelect == heroStartRoom)
+			{
+				roomSelect = RNG.Next(rooms.Count);
+			}
+			zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+			zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
+				(Zombie.Difficulty)0);
+			zombie.SetTexture(zombieEasyTexture);
+			zombies.Add(zombie);
+
+			roomSelect = heroStartRoom;
+			while (roomSelect == heroStartRoom)
+			{
+				roomSelect = RNG.Next(rooms.Count);
+			}
+			zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+			zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
+				(Zombie.Difficulty)1);
+			zombie.SetTexture(zombieMediumTexture);
+			zombies.Add(zombie);
+
+			roomSelect = heroStartRoom;
+			while (roomSelect == heroStartRoom)
+			{
+				roomSelect = RNG.Next(rooms.Count);
+			}
+			zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+			zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
+				(Zombie.Difficulty)2);
+			zombie.SetTexture(zombieHardTexture);
+			zombies.Add(zombie);
 		}
 
 	}

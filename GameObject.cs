@@ -138,7 +138,15 @@ namespace RogueClone
 
 		public virtual void Draw(SpriteBatch batch)
 		{
-			batch.Draw(texture, GetPosition(), Color.White);
+			batch.Draw(texture, 
+				GetPosition(), 
+				null,
+				Color.White,
+				0,
+				Vector2.Zero,
+				1,
+				SpriteEffects.None,
+				0);
 		}
 
 

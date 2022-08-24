@@ -47,15 +47,15 @@ namespace RogueClone
 		{
 			batch.Draw(
 				GetTexture(),
-				GetPosition(),
+				new Rectangle((int)(GetPosition().X + GetSize().X / 2), 
+					(int)(GetPosition().Y + GetSize().Y / 2),
+					(int)GetSize().X, (int)GetSize().Y),
 				null,
 				Color.White,
 				rotation,
 				new Vector2(GetSize().X / 2, GetSize().Y / 2),
-				new Vector2(1, 1),
 				SpriteEffects.None,
-				0
-			);
+				0);
 		}
 
 	}
