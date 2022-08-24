@@ -49,7 +49,7 @@ namespace MelodiousMule
 		private readonly int LEVEL_COUNT = 10;
 		private readonly int[][] zombieDistribution = new int[][]
 			{
-				new int[] { 3, 0, 0},
+				new int[] { 3, 3, 3},
 				new int[] { 3, 1, 0},
 				new int[] { 3, 2, 0},
 				new int[] { 3, 3, 0},
@@ -60,11 +60,12 @@ namespace MelodiousMule
 				new int[] { 0, 5, 3},
 				new int[] { 0, 0, 8}
 			};
-		private readonly string startScreenText =
-			  "All your life you've heard of the legend of the Melodious Mule,\n"
-			+ " an extraordinary creature who could play a bugle. You always\n"
-			+ " wondered whether the legend was true. You set out on a quest\n"
-			+ "        to find the bugle of the Melodious Mule.";
+		private readonly string[] startScreenText = new string[] {
+			"All your life you've heard of the legend of the Melodious Mule,",
+			"an extraordinary creature who could play a bugle. You always",
+			"wondered whether the legend was true. You set out on a quest",
+			"to find the bugle of the Melodious Mule, rumored to be on the",
+			"10th level of some nearby caverns." };
 		private SpriteFont font;
 
 		public MelodiousMule()
@@ -73,9 +74,9 @@ namespace MelodiousMule
 			Content.RootDirectory = "Content";
 			IsMouseVisible = true;
 			_graphics.IsFullScreen = false;
-			_graphics.PreferredBackBufferWidth = 
+			_graphics.PreferredBackBufferWidth =
 				GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width - 50;
-			_graphics.PreferredBackBufferHeight = 
+			_graphics.PreferredBackBufferHeight =
 				GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height - 100;
 			_graphics.ApplyChanges();
 		}
@@ -144,7 +145,7 @@ namespace MelodiousMule
 				if (allGameObjects.Count == 0)
 				{
 					GenerateStartScreen();
-				}				
+				}
 				foreach (Button thisButton in buttons)
 				{
 					if (thisButton.Update(mouseState) && thisButton.GetText() == "Play")
@@ -159,6 +160,22 @@ namespace MelodiousMule
 				if (allGameObjects.Count == 0)
 				{
 					GenerateMap();
+					var transformMatrix = Matrix.Invert(Matrix.CreateTranslation(xTranslation, yTranslation, 0));
+					var worldMousePosition =
+						Vector2.Transform(new Vector2(mouseState.X, mouseState.Y), transformMatrix);
+					var mouseX = worldMousePosition.X;
+					var mouseY = worldMousePosition.Y;
+					var canAttack = theHero.CanAttack(walls.ConvertAll(x => (GameObject)x), mouseX, mouseY);
+					if (canAttack)
+					{
+						lastCanAttack = true;
+						Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairGreenTexture, CURSOR_SIZE, CURSOR_SIZE));
+					}
+					else
+					{
+						lastCanAttack = false;
+						Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
+					}
 				}
 				var newTranslation =
 					theHero.Update(
@@ -194,22 +211,7 @@ namespace MelodiousMule
 				Vector2.Transform(new Vector2(mouseState.X, mouseState.Y), transformMatrix);
 			var mouseX = worldMousePosition.X;
 			var mouseY = worldMousePosition.Y;
-			var heroX = theHero.GetPosition().X + theHero.GetSize().X / 2;
-			var heroY = theHero.GetPosition().Y + theHero.GetSize().Y / 2;
-			var distanceToMouse = Vector2.Distance(new Vector2(heroX, heroY), new Vector2(mouseX, mouseY));
-			var attackRay = new Ray(
-				new Vector3(heroX, heroY, 0),
-				new Vector3(mouseX - heroX, mouseY - heroY, 0));
-			bool canAttack = true;
-			foreach (GameObject thisWall in walls)
-			{
-				float? hit = attackRay.Intersects(thisWall.GetBoundingBox());
-				if (hit != null
-					&& Vector2.Distance(thisWall.GetPosition(), theHero.GetPosition()) < distanceToMouse)
-				{
-					canAttack = false;
-				}
-			}
+			bool canAttack = theHero.CanAttack(walls.ConvertAll(x => (GameObject)x), mouseX, mouseY);
 			if (canAttack && !lastCanAttack)
 			{
 				Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairGreenTexture, CURSOR_SIZE, CURSOR_SIZE));
@@ -221,7 +223,12 @@ namespace MelodiousMule
 			lastCanAttack = canAttack;
 			if (mouseState.LeftButton == ButtonState.Pressed && canAttack)
 			{
-
+				var objectsToRemove = theHero.Attack(zombies, mouseX, mouseY);
+				foreach (Zombie thisObject in objectsToRemove)
+				{
+					allGameObjects.Remove(thisObject);
+					zombies.Remove(thisObject);
+				}
 			}
 		}
 
@@ -241,14 +248,16 @@ namespace MelodiousMule
 			{
 				roomSelect = RNG.Next(rooms.Count);
 			}
-			var stairsPosition = rooms[roomSelect].GetRandomPointInside(3);
-			theStairs.SetPosition(stairsPosition.X * TILE_SIZE, stairsPosition.Y * TILE_SIZE);
-			allGameObjects.Add(theStairs);
+			if (currentLevel < LEVEL_COUNT - 1)
+			{
+				var stairsPosition = rooms[roomSelect].GetRandomPointInside(3);
+				theStairs.SetPosition(stairsPosition.X * TILE_SIZE, stairsPosition.Y * TILE_SIZE);
+				allGameObjects.Add(theStairs);
+			}
 			GenerateZombies();
 			allGameObjects.AddRange(zombies);
 			xTranslation = _graphics.PreferredBackBufferWidth / 2 - theHero.GetPosition().X - theHero.GetSize().X / 2;
 			yTranslation = _graphics.PreferredBackBufferHeight / 2 - theHero.GetPosition().Y - theHero.GetSize().Y / 2;
-			Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
 		}
 
 		private void ConnectMap()
@@ -561,11 +570,15 @@ namespace MelodiousMule
 			if (currentGameState == GameState.PREGAME)
 			{
 				_spriteBatch.Begin();
-				_spriteBatch.DrawString(
-					font,
-					startScreenText,
-					new Vector2((_graphics.PreferredBackBufferWidth - font.MeasureString(startScreenText).X) / 2, 50),
-					Color.White);
+				for (int i = 0; i < startScreenText.Length; i++)
+				{
+					_spriteBatch.DrawString(
+						font,
+						startScreenText[i],
+						new Vector2((_graphics.PreferredBackBufferWidth - font.MeasureString(startScreenText[i]).X) / 2,
+							(font.MeasureString(startScreenText[i]).Y + 3) * i + 50),
+						Color.White);
+				}
 				foreach (GameObject thisGameObject in allGameObjects)
 				{
 					thisGameObject.Draw(_spriteBatch);
@@ -580,12 +593,13 @@ namespace MelodiousMule
 				foreach (GameObject thisGameObject in allGameObjects)
 				{
 					thisGameObject.Draw(_spriteBatch);
-				}				
+				}
 				_spriteBatch.End();
 				_spriteBatch.Begin();
 				_spriteBatch.DrawString(
 					font,
-					$"Level: {currentLevel + 1}",
+					$"Level: {currentLevel + 1}"
+						+ $"   HP: {theHero.GetHP()}",
 					new Vector2(10, 10),
 					Color.White,
 					0,

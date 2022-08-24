@@ -11,7 +11,15 @@ namespace MelodiousMule
 		private readonly Difficulty difficulty;
 		private readonly int[] SPEED = new int[] { 50, 100, 150 };
 		private readonly int[] VISION = new int[] { 200, 250, 300 };
-		
+		private readonly int[] DAMAGE = new int[] { 1, 10, 25 };
+		private readonly int[] MAX_HP = new int[] { 10, 20, 40};
+		private int currentHP;
+		private readonly float ATTACK_COOLDOWN = 1.0f;
+		private float attackTimer;
+		private readonly float DAMAGE_EFFECT_COOLDOWN = .25f;
+		private float damageEffectTimer;
+
+
 		public enum AnimType { MOVE_N, MOVE_S, MOVE_W, MOVE_E, IDLE };
 		private AnimType currentAnimation = AnimType.IDLE;
 		private Animation[] animations = new Animation[5];
@@ -19,6 +27,9 @@ namespace MelodiousMule
 		{
 			this.difficulty = difficulty;
 			SetSize(30, 35);
+			currentHP = MAX_HP[(int)difficulty];
+			attackTimer = ATTACK_COOLDOWN + 1f;
+			damageEffectTimer = DAMAGE_EFFECT_COOLDOWN + 1f;
 			animations[(int)AnimType.MOVE_N] = new Animation(
 				9 * (int)Math.Round(GetSize().X), 4, .2f, (int)Math.Round(GetSize().X));
 			animations[(int)AnimType.MOVE_S] = new Animation(
@@ -30,7 +41,7 @@ namespace MelodiousMule
 			animations[(int)AnimType.IDLE] = new Animation(0, 1, .2f, (int)Math.Round(GetSize().X));
 		}
 
-		public void Update(GameObject target, List<GameObject> obstacles, GameTime gameTime)
+		public void Update(Hero target, List<GameObject> obstacles, GameTime gameTime)
 		{
 			var movement = (float)gameTime.ElapsedGameTime.TotalSeconds * SPEED[(int)difficulty];
 			SetCurrentAnimation(AnimType.IDLE);
@@ -74,6 +85,13 @@ namespace MelodiousMule
 				}
 			}
 			animations[(int)currentAnimation].Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+			attackTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+			if (GetRectangle().Intersects(target.GetRectangle()) && attackTimer >= ATTACK_COOLDOWN)
+			{
+				attackTimer = 0f;
+				target.TakeDamage(DAMAGE[(int)difficulty]);
+			}
+			damageEffectTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 		}
 
 		public void SetCurrentAnimation(AnimType newAnimation)
@@ -81,13 +99,25 @@ namespace MelodiousMule
 			currentAnimation = newAnimation;
 		}
 
+		public int TakeDamage(int damage)
+		{
+			currentHP -= damage;
+			damageEffectTimer = 0f;
+			return currentHP;			
+		}
+
 		public override void Draw(SpriteBatch batch)
 		{
+			Color drawColor = Color.White; 
+			if (damageEffectTimer < DAMAGE_EFFECT_COOLDOWN)
+			{
+				drawColor = Color.Red;
+			}
 			batch.Draw(
 				GetTexture(),
 				GetRectangle(),
 				animations[(int)currentAnimation].GetSourceRectangle(),
-				Color.White,
+				drawColor,
 				0,
 				new Vector2(0, 0),
 				SpriteEffects.None,

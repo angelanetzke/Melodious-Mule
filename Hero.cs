@@ -11,9 +11,17 @@ namespace MelodiousMule
 		private AnimType currentAnimation = AnimType.IDLE;
 		private Animation[] animations = new Animation[5];
 		private readonly int SPEED = 200;
+		private int HP = 10;
+		private int ATTACK_RANGE = 225;
+		private int attackPower;
+		private readonly float ATTACK_COOLDOWN = .25f;
+		private float attackTimer;
+		
 		public Hero(float x, float y) : base(x, y)
 		{
 			SetSize(32, 32);
+			attackPower = 5;
+			attackTimer = ATTACK_COOLDOWN + 1f;
 			animations[(int)AnimType.MOVE_N] = new Animation(5 * 32, 4, .2f, 32);
 			animations[(int)AnimType.MOVE_S] = new Animation(0, 4, .2f, 32);
 			animations[(int)AnimType.MOVE_W] = new Animation(10 * 32, 4, .2f, 32);
@@ -24,6 +32,61 @@ namespace MelodiousMule
 		public void SetCurrentAnimation(AnimType newAnimation)
 		{
 			currentAnimation = newAnimation;
+		}
+
+		public void TakeDamage(int damage)
+		{
+			HP -= damage;
+		}
+
+		public int GetHP()
+		{
+			return HP;
+		}
+
+		public bool CanAttack(List<GameObject> obstacles, float mouseX, float mouseY)
+		{
+			var heroX = GetPosition().X + GetSize().X / 2;
+			var heroY = GetPosition().Y + GetSize().Y / 2;
+			var distanceToMouse = Vector2.Distance(new Vector2(heroX, heroY), new Vector2(mouseX, mouseY));
+			if (distanceToMouse > ATTACK_RANGE)
+			{
+				return false;
+			}
+			var attackRay = new Ray(
+				new Vector3(heroX, heroY, 0),
+				new Vector3(mouseX - heroX, mouseY - heroY, 0));
+			bool canAttack = true;
+			foreach (GameObject thisWall in obstacles)
+			{
+				float? hit = attackRay.Intersects(thisWall.GetBoundingBox());
+				if (hit != null
+					&& Vector2.Distance(thisWall.GetPosition(), GetPosition()) < distanceToMouse)
+				{
+					canAttack = false;
+				}
+			}
+			return canAttack;
+		}
+
+		public List<Zombie> Attack(List<Zombie> enemies, float mouseX, float mouseY)
+		{
+			List<Zombie> defeatedEnemies = new();
+			if (attackTimer > ATTACK_COOLDOWN)
+			{
+				foreach (Zombie thisEnemy in enemies)
+				{
+					if (thisEnemy.GetRectangle().Contains(mouseX, mouseY))
+					{
+						if (thisEnemy.TakeDamage(attackPower) <= 0)
+						{
+							defeatedEnemies.Add(thisEnemy);							
+						}
+						attackTimer = 0f;
+					}
+				}
+			}
+			return defeatedEnemies;
 		}
 
 		public Vector2 Update(KeyboardState keyState, List<GameObject> obstacles, GameTime gameTime,
@@ -56,6 +119,7 @@ namespace MelodiousMule
 				yTranslation -= movement;
 			}
 			animations[(int)currentAnimation].Update((float)gameTime.ElapsedGameTime.TotalSeconds);
+			attackTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 			return new Vector2(xTranslation, yTranslation);
 		}
 
