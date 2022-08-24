@@ -78,7 +78,7 @@ namespace MelodiousMule
 				0,
 				new Vector2(0, 0),
 				effects,
-				1
+				.6f
 			);
 		}
 

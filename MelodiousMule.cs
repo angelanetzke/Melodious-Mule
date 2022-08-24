@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MelodiousMule
 {
@@ -26,6 +27,7 @@ namespace MelodiousMule
 		private Texture2D zombieHardTexture;
 		private Texture2D groundTexture;
 		private Texture2D buttonTexture;
+		private Texture2D stairsTexture;
 		private readonly int TILE_SIZE = 16;
 		private readonly int[] centerX = new int[] { 20, 70, 120, 20, 70, 120, 20, 70, 120 };
 		private readonly int[] centerY = new int[] { 20, 20, 20, 70, 70, 70, 120, 120, 120 };
@@ -37,6 +39,7 @@ namespace MelodiousMule
 		private readonly List<Room> rooms = new();
 		private readonly int ROOM_COUNT = 9;
 		private readonly Hero theHero = new(0, 0);
+		private readonly Stairs theStairs = new(0, 0);
 		private int heroStartRoom = 0;
 		private readonly int CURSOR_SIZE = 32;
 		bool lastCanAttack = false;
@@ -126,6 +129,8 @@ namespace MelodiousMule
 			groundTexture = Content.Load<Texture2D>(@"Level\ground");
 			font = Content.Load<SpriteFont>(@"UI\Kenney_Pixel");
 			buttonTexture = Content.Load<Texture2D>(@"UI\buttonshape");
+			stairsTexture = Content.Load<Texture2D>(@"Level\stairs");
+			theStairs.SetTexture(stairsTexture);
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -168,6 +173,15 @@ namespace MelodiousMule
 				foreach (Zombie thisZombie in zombies)
 				{
 					thisZombie.Update(theHero, walls.ConvertAll(x => (GameObject)x), gameTime);
+				}
+				if (theHero.GetRectangle().Intersects(theStairs.GetRectangle()))
+				{
+					allGameObjects = new();
+					currentLevel++;
+					if (currentLevel == LEVEL_COUNT)
+					{
+						Exit();
+					}
 				}
 			}
 			base.Update(gameTime);
@@ -223,13 +237,18 @@ namespace MelodiousMule
 			var roomSelect = RNG.Next(rooms.Count);
 			theHero.SetPosition(centerX[roomSelect] * TILE_SIZE, centerY[roomSelect] * TILE_SIZE);
 			heroStartRoom = roomSelect;
+			while (roomSelect == heroStartRoom)
+			{
+				roomSelect = RNG.Next(rooms.Count);
+			}
+			var stairsPosition = rooms[roomSelect].GetRandomPointInside(3);
+			theStairs.SetPosition(stairsPosition.X * TILE_SIZE, stairsPosition.Y * TILE_SIZE);
+			allGameObjects.Add(theStairs);
 			GenerateZombies();
 			allGameObjects.AddRange(zombies);
 			xTranslation = _graphics.PreferredBackBufferWidth / 2 - theHero.GetPosition().X - theHero.GetSize().X / 2;
 			yTranslation = _graphics.PreferredBackBufferHeight / 2 - theHero.GetPosition().Y - theHero.GetSize().Y / 2;
-			currentGameState = GameState.PLAYING;
 			Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
-			System.Diagnostics.Debug.WriteLine(zombies.Count);
 		}
 
 		private void ConnectMap()
@@ -484,39 +503,47 @@ namespace MelodiousMule
 		private void GenerateZombies()
 		{
 			Zombie zombie;
-			var roomSelect = heroStartRoom;
 			Point zombieLocation;
-			while (roomSelect == heroStartRoom)
+			int roomSelect;
+			for (int i = 0; i < zombieDistribution[currentLevel][0]; i++)
 			{
-				roomSelect = RNG.Next(rooms.Count);
+				roomSelect = heroStartRoom;
+				while (roomSelect == heroStartRoom)
+				{
+					roomSelect = RNG.Next(rooms.Count);
+				}
+				zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
+					Zombie.Difficulty.EASY);
+				zombie.SetTexture(zombieEasyTexture);
+				zombies.Add(zombie);
 			}
-			zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
-			zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
-				(Zombie.Difficulty)0);
-			zombie.SetTexture(zombieEasyTexture);
-			zombies.Add(zombie);
-
-			roomSelect = heroStartRoom;
-			while (roomSelect == heroStartRoom)
+			for (int i = 0; i < zombieDistribution[currentLevel][1]; i++)
 			{
-				roomSelect = RNG.Next(rooms.Count);
+				roomSelect = heroStartRoom;
+				while (roomSelect == heroStartRoom)
+				{
+					roomSelect = RNG.Next(rooms.Count);
+				}
+				zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
+					Zombie.Difficulty.MEDIUM);
+				zombie.SetTexture(zombieMediumTexture);
+				zombies.Add(zombie);
 			}
-			zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
-			zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
-				(Zombie.Difficulty)1);
-			zombie.SetTexture(zombieMediumTexture);
-			zombies.Add(zombie);
-
-			roomSelect = heroStartRoom;
-			while (roomSelect == heroStartRoom)
+			for (int i = 0; i < zombieDistribution[currentLevel][2]; i++)
 			{
-				roomSelect = RNG.Next(rooms.Count);
+				roomSelect = heroStartRoom;
+				while (roomSelect == heroStartRoom)
+				{
+					roomSelect = RNG.Next(rooms.Count);
+				}
+				zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
+					Zombie.Difficulty.HARD);
+				zombie.SetTexture(zombieHardTexture);
+				zombies.Add(zombie);
 			}
-			zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
-			zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
-				(Zombie.Difficulty)2);
-			zombie.SetTexture(zombieHardTexture);
-			zombies.Add(zombie);
 		}
 
 		private void GenerateStartScreen()
@@ -553,7 +580,19 @@ namespace MelodiousMule
 				foreach (GameObject thisGameObject in allGameObjects)
 				{
 					thisGameObject.Draw(_spriteBatch);
-				}
+				}				
+				_spriteBatch.End();
+				_spriteBatch.Begin();
+				_spriteBatch.DrawString(
+					font,
+					$"Level: {currentLevel + 1}",
+					new Vector2(10, 10),
+					Color.White,
+					0,
+					Vector2.Zero,
+					1,
+					SpriteEffects.None,
+					1);
 				_spriteBatch.End();
 			}
 			base.Draw(gameTime);

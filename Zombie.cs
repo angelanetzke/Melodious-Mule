@@ -91,7 +91,7 @@ namespace MelodiousMule
 				0,
 				new Vector2(0, 0),
 				SpriteEffects.None,
-				1
+				.6f
 			);
 		}
 
