@@ -11,16 +11,19 @@ namespace MelodiousMule
 		private AnimType currentAnimation = AnimType.IDLE;
 		private Animation[] animations = new Animation[5];
 		private readonly int SPEED = 200;
-		private int HP = 10;
-		private int ATTACK_RANGE = 225;
-		private int attackPower;
+		private readonly int START_HP = 10;
+		private int HP;
+		private readonly int ATTACK_RANGE = 225;
+		private readonly int START_STRENGTH = 5;
+		private int strength;
 		private readonly float ATTACK_COOLDOWN = .25f;
 		private float attackTimer;
 		
 		public Hero(float x, float y) : base(x, y)
 		{
 			SetSize(32, 32);
-			attackPower = 5;
+			HP = START_HP;
+			strength = START_STRENGTH;
 			attackTimer = ATTACK_COOLDOWN + 1f;
 			animations[(int)AnimType.MOVE_N] = new Animation(5 * 32, 4, .2f, 32);
 			animations[(int)AnimType.MOVE_S] = new Animation(0, 4, .2f, 32);
@@ -42,6 +45,11 @@ namespace MelodiousMule
 		public int GetHP()
 		{
 			return HP;
+		}
+
+		public int GetStrength()
+		{
+			return strength;
 		}
 
 		public bool CanAttack(List<GameObject> obstacles, float mouseX, float mouseY)
@@ -78,7 +86,7 @@ namespace MelodiousMule
 				{
 					if (thisEnemy.GetRectangle().Contains(mouseX, mouseY))
 					{
-						if (thisEnemy.TakeDamage(attackPower) <= 0)
+						if (thisEnemy.TakeDamage(strength) <= 0)
 						{
 							defeatedEnemies.Add(thisEnemy);							
 						}
@@ -87,6 +95,13 @@ namespace MelodiousMule
 				}
 			}
 			return defeatedEnemies;
+		}
+
+		public void Reset()
+		{
+			HP = START_HP;
+			strength = START_STRENGTH;
+			attackTimer = ATTACK_COOLDOWN + 1f;
 		}
 
 		public Vector2 Update(KeyboardState keyState, List<GameObject> obstacles, GameTime gameTime,

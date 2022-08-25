@@ -28,6 +28,8 @@ namespace MelodiousMule
 		private Texture2D groundTexture;
 		private Texture2D buttonTexture;
 		private Texture2D stairsTexture;
+		private Texture2D bugleTexture;
+		private Texture2D muleTexture;
 		private readonly int TILE_SIZE = 16;
 		private readonly int[] centerX = new int[] { 20, 70, 120, 20, 70, 120, 20, 70, 120 };
 		private readonly int[] centerY = new int[] { 20, 20, 20, 70, 70, 70, 120, 120, 120 };
@@ -40,16 +42,17 @@ namespace MelodiousMule
 		private readonly int ROOM_COUNT = 9;
 		private readonly Hero theHero = new(0, 0);
 		private readonly Stairs theStairs = new(0, 0);
+		private readonly Bugle theBugle = new(0, 0);
 		private int heroStartRoom = 0;
 		private readonly int CURSOR_SIZE = 32;
-		bool lastCanAttack = false;
-		private enum GameState { PREGAME, PLAYING };
+		private bool lastCanAttack = false;
+		private enum GameState { PREGAME, PLAYING, WIN };
 		private GameState currentGameState;
 		private int currentLevel = 0;
 		private readonly int LEVEL_COUNT = 10;
 		private readonly int[][] zombieDistribution = new int[][]
 			{
-				new int[] { 3, 3, 3},
+				new int[] { 3, 0, 0},
 				new int[] { 3, 1, 0},
 				new int[] { 3, 2, 0},
 				new int[] { 3, 3, 0},
@@ -65,7 +68,12 @@ namespace MelodiousMule
 			"an extraordinary creature who could play a bugle. You always",
 			"wondered whether the legend was true. You set out on a quest",
 			"to find the bugle of the Melodious Mule, rumored to be on the",
-			"10th level of some nearby caverns." };
+			"10th level of some nearby caverns." 
+		};
+		private readonly string[] winScreenText = new string[] {
+			"You have found the legendary bugle! You triumphantly return\n",
+			"home with your prize."
+		};
 		private SpriteFont font;
 
 		public MelodiousMule()
@@ -132,6 +140,9 @@ namespace MelodiousMule
 			buttonTexture = Content.Load<Texture2D>(@"UI\buttonshape");
 			stairsTexture = Content.Load<Texture2D>(@"Level\stairs");
 			theStairs.SetTexture(stairsTexture);
+			bugleTexture = Content.Load<Texture2D>(@"Level\bugle");
+			theBugle.SetTexture(bugleTexture);
+			muleTexture = Content.Load<Texture2D>(@"UI\mule");
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -148,14 +159,15 @@ namespace MelodiousMule
 				}
 				foreach (Button thisButton in buttons)
 				{
-					if (thisButton.Update(mouseState) && thisButton.GetText() == "Play")
+					var thisButtonClicked = thisButton.Update(mouseState);
+					if (thisButtonClicked && thisButton.GetText() == "Play")
 					{
 						allGameObjects = new();
 						currentGameState = GameState.PLAYING;
 					}
 				}
 			}
-			if (currentGameState == GameState.PLAYING)
+			else if (currentGameState == GameState.PLAYING)
 			{
 				if (allGameObjects.Count == 0)
 				{
@@ -177,6 +189,13 @@ namespace MelodiousMule
 						Mouse.SetCursor(MouseCursor.FromTexture2D(crosshairRedTexture, CURSOR_SIZE, CURSOR_SIZE));
 					}
 				}
+				if (theHero.GetRectangle().Intersects(theBugle.GetRectangle()))
+				{
+					allGameObjects = new();
+					currentGameState = GameState.WIN;
+					Mouse.SetCursor(MouseCursor.Arrow);
+					GenerateWinScreen();
+				}
 				var newTranslation =
 					theHero.Update(
 						keyState,
@@ -191,11 +210,26 @@ namespace MelodiousMule
 				{
 					thisZombie.Update(theHero, walls.ConvertAll(x => (GameObject)x), gameTime);
 				}
-				if (theHero.GetRectangle().Intersects(theStairs.GetRectangle()))
+				if (theHero.GetRectangle().Intersects(theStairs.GetRectangle()) 
+					&& currentLevel < LEVEL_COUNT - 1)
 				{
 					allGameObjects = new();
 					currentLevel++;
-					if (currentLevel == LEVEL_COUNT)
+				}
+			}
+			else if (currentGameState == GameState.WIN)
+			{
+				foreach (Button thisButton in buttons)
+				{
+					var thisButtonClicked = thisButton.Update(mouseState);
+					if (thisButtonClicked && thisButton.GetText() == "Play Again")
+					{
+						allGameObjects = new();
+						currentGameState = GameState.PLAYING;
+						currentLevel = 0;
+						theHero.Reset();
+					}
+					else if(thisButtonClicked && thisButton.GetText() == "Exit")
 					{
 						Exit();
 					}
@@ -253,6 +287,12 @@ namespace MelodiousMule
 				var stairsPosition = rooms[roomSelect].GetRandomPointInside(3);
 				theStairs.SetPosition(stairsPosition.X * TILE_SIZE, stairsPosition.Y * TILE_SIZE);
 				allGameObjects.Add(theStairs);
+			}
+			else
+			{
+				var buglePosition = rooms[roomSelect].GetRandomPointInside(3);
+				theBugle.SetPosition(buglePosition.X * TILE_SIZE, buglePosition.Y * TILE_SIZE);
+				allGameObjects.Add(theBugle);
 			}
 			GenerateZombies();
 			allGameObjects.AddRange(zombies);
@@ -564,6 +604,23 @@ namespace MelodiousMule
 			allGameObjects.Add(startButton);
 		}
 
+		
+		private void GenerateWinScreen() 
+		{
+			buttons = new();
+			var buttonY = (font.MeasureString(winScreenText[0]).Y + 3) * winScreenText.Length 
+				+ 60 + muleTexture.Height + 10;
+			var centerX = _graphics.PreferredBackBufferWidth / 2;
+			var newButton = new Button(0, 0, "Play Again", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX - newButton.GetSize().X - 10, buttonY);
+			buttons.Add(newButton);
+			newButton = new Button(0, 0, "Exit", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX + 10, buttonY);
+			buttons.Add(newButton);
+			allGameObjects.AddRange(buttons);
+		}
 		protected override void Draw(GameTime gameTime)
 		{
 			GraphicsDevice.Clear(Color.Black);
@@ -599,7 +656,8 @@ namespace MelodiousMule
 				_spriteBatch.DrawString(
 					font,
 					$"Level: {currentLevel + 1}"
-						+ $"   HP: {theHero.GetHP()}",
+					+ $"   HP: {theHero.GetHP()}"
+					+ $"   Strength: {theHero.GetStrength()}",
 					new Vector2(10, 10),
 					Color.White,
 					0,
@@ -607,6 +665,32 @@ namespace MelodiousMule
 					1,
 					SpriteEffects.None,
 					1);
+				_spriteBatch.End();
+			}
+			else if (currentGameState == GameState.WIN)
+			{
+				_spriteBatch.Begin();
+				for (int i = 0; i < winScreenText.Length; i++)
+				{
+					_spriteBatch.DrawString(
+						font,
+						winScreenText[i],
+						new Vector2((_graphics.PreferredBackBufferWidth - font.MeasureString(winScreenText[i]).X) / 2,
+							(font.MeasureString(winScreenText[i]).Y + 3) * i + 50),
+						Color.White);
+				}
+				_spriteBatch.Draw(
+					muleTexture,
+					new Rectangle(
+						(_graphics.PreferredBackBufferWidth - muleTexture.Width) / 2,
+						(int)(font.MeasureString(winScreenText[0]).Y + 3) * winScreenText.Length + 60,
+						muleTexture.Width,
+						muleTexture.Height),
+						Color.White);
+				foreach (GameObject thisGameObject in allGameObjects)
+				{
+					thisGameObject.Draw(_spriteBatch);
+				}
 				_spriteBatch.End();
 			}
 			base.Draw(gameTime);
