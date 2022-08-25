@@ -12,14 +12,12 @@ namespace MelodiousMule
 		private readonly int[] SPEED = new int[] { 50, 100, 150 };
 		private readonly int[] VISION = new int[] { 200, 250, 300 };
 		private readonly int[] DAMAGE = new int[] { 1, 10, 25 };
-		private readonly int[] MAX_HP = new int[] { 10, 20, 40};
+		private readonly int[] MAX_HP = new int[] { 20, 50, 100};
 		private int currentHP;
 		private readonly float ATTACK_COOLDOWN = 1.0f;
 		private float attackTimer;
 		private readonly float DAMAGE_EFFECT_COOLDOWN = .25f;
 		private float damageEffectTimer;
-
-
 		public enum AnimType { MOVE_N, MOVE_S, MOVE_W, MOVE_E, IDLE };
 		private AnimType currentAnimation = AnimType.IDLE;
 		private Animation[] animations = new Animation[5];

@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static MelodiousMule.Potion;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace MelodiousMule
@@ -16,6 +17,7 @@ namespace MelodiousMule
 		private List<Wall> walls = new();
 		private List<Zombie> zombies = new();
 		private List<Button> buttons = new();
+		private List<Potion> potions = new();
 		private readonly Random RNG = new();
 		private Texture2D cornerTexture;
 		private Texture2D wallTexture;
@@ -30,6 +32,8 @@ namespace MelodiousMule
 		private Texture2D stairsTexture;
 		private Texture2D bugleTexture;
 		private Texture2D muleTexture;
+		private Texture2D potionHealthTexture;
+		private Texture2D potionStrengthTexture;
 		private readonly int TILE_SIZE = 16;
 		private readonly int[] centerX = new int[] { 20, 70, 120, 20, 70, 120, 20, 70, 120 };
 		private readonly int[] centerY = new int[] { 20, 20, 20, 70, 70, 70, 120, 120, 120 };
@@ -52,23 +56,23 @@ namespace MelodiousMule
 		private readonly int LEVEL_COUNT = 10;
 		private readonly int[][] zombieDistribution = new int[][]
 			{
-				new int[] { 3, 0, 0},
-				new int[] { 3, 1, 0},
-				new int[] { 3, 2, 0},
-				new int[] { 3, 3, 0},
-				new int[] { 0, 5, 0},
-				new int[] { 0, 6, 0},
-				new int[] { 0, 7, 0},
-				new int[] { 0, 5, 2},
-				new int[] { 0, 5, 3},
-				new int[] { 0, 0, 8}
+				new int[] { 5, 0, 0},
+				new int[] { 5, 2, 0},
+				new int[] { 3, 5, 0},
+				new int[] { 3, 7, 0},
+				new int[] { 0, 10, 0},
+				new int[] { 0, 14, 0},
+				new int[] { 0, 12, 5},
+				new int[] { 0, 12, 10},
+				new int[] { 0, 12, 20},
+				new int[] { 0, 0, 40}
 			};
 		private readonly string[] startScreenText = new string[] {
 			"All your life you've heard of the legend of the Melodious Mule,",
 			"an extraordinary creature who could play a bugle. You always",
 			"wondered whether the legend was true. You set out on a quest",
 			"to find the bugle of the Melodious Mule, rumored to be on the",
-			"10th level of some nearby caverns." 
+			"10th level of some nearby caverns."
 		};
 		private readonly string[] winScreenText = new string[] {
 			"You have found the legendary bugle! You triumphantly return\n",
@@ -143,6 +147,8 @@ namespace MelodiousMule
 			bugleTexture = Content.Load<Texture2D>(@"Level\bugle");
 			theBugle.SetTexture(bugleTexture);
 			muleTexture = Content.Load<Texture2D>(@"UI\mule");
+			potionHealthTexture = Content.Load<Texture2D>(@"Level\potion-health");
+			potionStrengthTexture = Content.Load<Texture2D>(@"Level\potion-strength");
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -196,6 +202,18 @@ namespace MelodiousMule
 					Mouse.SetCursor(MouseCursor.Arrow);
 					GenerateWinScreen();
 				}
+				if (currentLevel < LEVEL_COUNT - 1
+					&& theHero.GetRectangle().Intersects(theStairs.GetRectangle()))
+				{
+					allGameObjects = new();
+					currentLevel++;
+				}
+				CollectPotions();
+				Attack(mouseState);
+				foreach (Zombie thisZombie in zombies)
+				{
+					thisZombie.Update(theHero, walls.ConvertAll(x => (GameObject)x), gameTime);
+				}
 				var newTranslation =
 					theHero.Update(
 						keyState,
@@ -205,17 +223,6 @@ namespace MelodiousMule
 						yTranslation);
 				xTranslation = newTranslation.X;
 				yTranslation = newTranslation.Y;
-				Attack(mouseState);
-				foreach (Zombie thisZombie in zombies)
-				{
-					thisZombie.Update(theHero, walls.ConvertAll(x => (GameObject)x), gameTime);
-				}
-				if (theHero.GetRectangle().Intersects(theStairs.GetRectangle()) 
-					&& currentLevel < LEVEL_COUNT - 1)
-				{
-					allGameObjects = new();
-					currentLevel++;
-				}
 			}
 			else if (currentGameState == GameState.WIN)
 			{
@@ -229,13 +236,38 @@ namespace MelodiousMule
 						currentLevel = 0;
 						theHero.Reset();
 					}
-					else if(thisButtonClicked && thisButton.GetText() == "Exit")
+					else if (thisButtonClicked && thisButton.GetText() == "Exit")
 					{
 						Exit();
 					}
 				}
 			}
 			base.Update(gameTime);
+		}
+
+		private void CollectPotions()
+		{
+			var potionsToRemove = new List<Potion>();
+			foreach (Potion thisPotion in potions)
+			{
+				if (theHero.GetRectangle().Intersects(thisPotion.GetRectangle()))
+				{
+					if (thisPotion.GetPotionType() == Potion.PotionType.HEALTH)
+					{
+						theHero.IncreaseHP();
+					}
+					if (thisPotion.GetPotionType() == Potion.PotionType.STRENGTH)
+					{
+						theHero.IncreaseStrength();
+					}
+					potionsToRemove.Add(thisPotion);
+				}
+			}
+			foreach (Potion thisPotion in potionsToRemove)
+			{
+				potions.Remove(thisPotion);
+				allGameObjects.Remove(thisPotion);
+			}
 		}
 
 		private void Attack(MouseState mouseState)
@@ -294,6 +326,8 @@ namespace MelodiousMule
 				theBugle.SetPosition(buglePosition.X * TILE_SIZE, buglePosition.Y * TILE_SIZE);
 				allGameObjects.Add(theBugle);
 			}
+			GeneratePotions(heroStartRoom, roomSelect);
+			allGameObjects.AddRange(potions);
 			GenerateZombies();
 			allGameObjects.AddRange(zombies);
 			xTranslation = _graphics.PreferredBackBufferWidth / 2 - theHero.GetPosition().X - theHero.GetSize().X / 2;
@@ -595,6 +629,37 @@ namespace MelodiousMule
 			}
 		}
 
+		private void GeneratePotions(int heroRoom, int stairsOrBugleRoom)
+		{
+			potions = new();
+			var strengthPotionRoom = heroRoom;
+			while (strengthPotionRoom == heroRoom || strengthPotionRoom == stairsOrBugleRoom)
+			{
+				strengthPotionRoom = RNG.Next(rooms.Count);
+			}
+			var healthPotionRoom = heroRoom;
+			while (healthPotionRoom == heroRoom
+				|| healthPotionRoom == stairsOrBugleRoom
+				|| healthPotionRoom == strengthPotionRoom)
+			{
+				healthPotionRoom = RNG.Next(rooms.Count);
+			}
+			var potionPosition = rooms[strengthPotionRoom].GetRandomPointInside();
+			var newPotion = new Potion(
+				potionPosition.X * TILE_SIZE,
+				potionPosition.Y * TILE_SIZE,
+				Potion.PotionType.STRENGTH);
+			newPotion.SetTexture(potionStrengthTexture);
+			potions.Add(newPotion);
+			potionPosition = rooms[healthPotionRoom].GetRandomPointInside();
+			newPotion = new Potion(
+				potionPosition.X * TILE_SIZE,
+				potionPosition.Y * TILE_SIZE,
+				Potion.PotionType.HEALTH);
+			newPotion.SetTexture(potionHealthTexture);
+			potions.Add(newPotion);
+		}
+
 		private void GenerateStartScreen()
 		{
 			buttons = new();
@@ -604,11 +669,11 @@ namespace MelodiousMule
 			allGameObjects.Add(startButton);
 		}
 
-		
-		private void GenerateWinScreen() 
+
+		private void GenerateWinScreen()
 		{
 			buttons = new();
-			var buttonY = (font.MeasureString(winScreenText[0]).Y + 3) * winScreenText.Length 
+			var buttonY = (font.MeasureString(winScreenText[0]).Y + 3) * winScreenText.Length
 				+ 60 + muleTexture.Height + 10;
 			var centerX = _graphics.PreferredBackBufferWidth / 2;
 			var newButton = new Button(0, 0, "Play Again", font);

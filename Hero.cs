@@ -12,9 +12,11 @@ namespace MelodiousMule
 		private Animation[] animations = new Animation[5];
 		private readonly int SPEED = 200;
 		private readonly int START_HP = 10;
+		private readonly int INCREMENT_HP = 10;
 		private int HP;
 		private readonly int ATTACK_RANGE = 225;
 		private readonly int START_STRENGTH = 5;
+		private readonly int INCREMENT_STRENGTH = 5;
 		private int strength;
 		private readonly float ATTACK_COOLDOWN = .25f;
 		private float attackTimer;
@@ -50,6 +52,16 @@ namespace MelodiousMule
 		public int GetStrength()
 		{
 			return strength;
+		}
+
+		public void IncreaseHP()
+		{
+			HP += INCREMENT_HP;
+		}
+
+		public void IncreaseStrength()
+		{
+			strength += INCREMENT_STRENGTH;
 		}
 
 		public bool CanAttack(List<GameObject> obstacles, float mouseX, float mouseY)
