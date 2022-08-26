@@ -4,8 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static MelodiousMule.Potion;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace MelodiousMule
 {
@@ -34,6 +32,12 @@ namespace MelodiousMule
 		private Texture2D muleTexture;
 		private Texture2D potionHealthTexture;
 		private Texture2D potionStrengthTexture;
+		private Texture2D helpScreen01Texture;
+		private Texture2D helpScreen02Texture;
+		private Texture2D helpScreen03Texture;
+		private Texture2D helpScreen04Texture;
+		private Texture2D helpScreen05Texture;
+		private Texture2D helpScreen06Texture;
 		private readonly int TILE_SIZE = 16;
 		private readonly int[] centerX = new int[] { 20, 70, 120, 20, 70, 120, 20, 70, 120 };
 		private readonly int[] centerY = new int[] { 20, 20, 20, 70, 70, 70, 120, 120, 120 };
@@ -50,7 +54,7 @@ namespace MelodiousMule
 		private int heroStartRoom = 0;
 		private readonly int CURSOR_SIZE = 32;
 		private bool lastCanAttack = false;
-		private enum GameState { PREGAME, PLAYING, WIN };
+		private enum GameState { PREGAME, PLAYING, WIN, LOSE, HELP_SCREEN };
 		private GameState currentGameState;
 		private int currentLevel = 0;
 		private readonly int LEVEL_COUNT = 10;
@@ -79,6 +83,37 @@ namespace MelodiousMule
 			"home with your prize."
 		};
 		private SpriteFont font;
+		private readonly string[][] helpScreenText = new string[][]
+		{
+			new string[] {"You, the hero. Move with WASD." },
+			new string[] {"The bugle. Find this to win the game!" },
+			new string[]
+			{
+				"Easy, medium, and hard zombies.",
+				"They will reduce your HP when you come in contact with them."
+			},
+			new string[]
+			{
+				"Your targeting reticle, indicating when you can or can't attack",
+				"based on distance and whether walls are in the way.",
+				"Control with mouse."
+			},
+			new string[]
+			{
+				"Health and strength potions.",
+				"There is one of each per level."
+			},
+			new string[]
+			{
+				"The stairs. Use to travel to the next level.",
+				"Once you leave a level, there is no going back."
+			}
+		};
+		private List<Texture2D> helpScreenIcons = new();
+		private int helpScreenPage = 0;
+		private readonly float BUTTON_COOLDOWN = .25f;
+		private float buttonTimer;
+		private string loseScreenText = "You have died. The bugle remains unfound.";
 
 		public MelodiousMule()
 		{
@@ -95,6 +130,7 @@ namespace MelodiousMule
 
 		protected override void Initialize()
 		{
+			buttonTimer = 0f;
 			currentGameState = GameState.PREGAME;
 			for (int i = 0; i < ROOM_COUNT; i++)
 			{
@@ -149,6 +185,18 @@ namespace MelodiousMule
 			muleTexture = Content.Load<Texture2D>(@"UI\mule");
 			potionHealthTexture = Content.Load<Texture2D>(@"Level\potion-health");
 			potionStrengthTexture = Content.Load<Texture2D>(@"Level\potion-strength");
+			helpScreen01Texture = Content.Load<Texture2D>(@"HelpScreen\helpscreen01");
+			helpScreen02Texture = Content.Load<Texture2D>(@"HelpScreen\helpscreen02");
+			helpScreen03Texture = Content.Load<Texture2D>(@"HelpScreen\helpscreen03");
+			helpScreen04Texture = Content.Load<Texture2D>(@"HelpScreen\helpscreen04");
+			helpScreen05Texture = Content.Load<Texture2D>(@"HelpScreen\helpscreen05");
+			helpScreen06Texture = Content.Load<Texture2D>(@"HelpScreen\helpscreen06");
+			helpScreenIcons.Add(helpScreen01Texture);
+			helpScreenIcons.Add(helpScreen02Texture);
+			helpScreenIcons.Add(helpScreen03Texture);
+			helpScreenIcons.Add(helpScreen04Texture);
+			helpScreenIcons.Add(helpScreen05Texture);
+			helpScreenIcons.Add(helpScreen06Texture);
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -170,6 +218,12 @@ namespace MelodiousMule
 					{
 						allGameObjects = new();
 						currentGameState = GameState.PLAYING;
+					}
+					if (thisButtonClicked && thisButton.GetText() == "How to Play")
+					{
+						allGameObjects = new();
+						currentGameState = GameState.HELP_SCREEN;
+						GenerateHelpScreen();
 					}
 				}
 			}
@@ -208,6 +262,13 @@ namespace MelodiousMule
 					allGameObjects = new();
 					currentLevel++;
 				}
+				if (theHero.GetHP() <= 0)
+				{
+					allGameObjects = new();
+					currentGameState = GameState.LOSE;
+					Mouse.SetCursor(MouseCursor.Arrow);
+					GenerateLoseScreen();
+				}
 				CollectPotions();
 				Attack(mouseState);
 				foreach (Zombie thisZombie in zombies)
@@ -235,6 +296,68 @@ namespace MelodiousMule
 						currentGameState = GameState.PLAYING;
 						currentLevel = 0;
 						theHero.Reset();
+					}
+					else if (thisButtonClicked && thisButton.GetText() == "Exit")
+					{
+						Exit();
+					}
+				}
+			}
+			else if (currentGameState == GameState.HELP_SCREEN)
+			{
+				buttonTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+				if (buttonTimer > BUTTON_COOLDOWN)
+				{
+					foreach (Button thisButton in buttons)
+					{
+						var thisButtonClicked = thisButton.Update(mouseState);
+						if (thisButtonClicked)
+						{
+							buttonTimer = 0f;
+						}
+						if (thisButtonClicked && thisButton.GetText() == "Play")
+						{
+							allGameObjects = new();
+							currentGameState = GameState.PLAYING;
+							currentLevel = 0;
+							theHero.Reset();
+						}
+						else if (thisButtonClicked && thisButton.GetText() == "Previous")
+						{
+							helpScreenPage--;
+							if (helpScreenPage < 0)
+							{
+								helpScreenPage = 0;
+							}
+						}
+						else if (thisButtonClicked && thisButton.GetText() == "Next")
+						{
+							helpScreenPage++;
+							if (helpScreenPage >= helpScreenIcons.Count)
+							{
+								helpScreenPage = helpScreenIcons.Count - 1;
+							}
+						}
+					}
+				}
+			}
+			else if (currentGameState == GameState.LOSE)
+			{
+				foreach (Button thisButton in buttons)
+				{
+					var thisButtonClicked = thisButton.Update(mouseState);
+					if (thisButtonClicked && thisButton.GetText() == "Play Again")
+					{
+						allGameObjects = new();
+						currentGameState = GameState.PLAYING;
+						currentLevel = 0;
+						theHero.Reset();
+					}
+					else if (thisButtonClicked && thisButton.GetText() == "How to Play")
+					{
+						allGameObjects = new();
+						currentGameState = GameState.HELP_SCREEN;
+						GenerateHelpScreen();
 					}
 					else if (thisButtonClicked && thisButton.GetText() == "Exit")
 					{
@@ -663,19 +786,44 @@ namespace MelodiousMule
 		private void GenerateStartScreen()
 		{
 			buttons = new();
-			var startButton = new Button(100, 400, "Play", font);
-			startButton.SetTexture(buttonTexture);
-			buttons.Add(startButton);
-			allGameObjects.Add(startButton);
+			var centerX = _graphics.PreferredBackBufferWidth / 2;
+			var buttonY = (font.MeasureString(startScreenText[0]).Y + 3) * startScreenText.Length + 60;
+			var newButton = new Button(0, 0, "Play", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX - newButton.GetSize().X - 10, buttonY);
+			buttons.Add(newButton);
+			newButton = new Button(0, 0, "How to Play", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX + 10, buttonY);
+			buttons.Add(newButton);
+			allGameObjects.AddRange(buttons);
 		}
 
+		private void GenerateHelpScreen()
+		{
+			buttons = new();
+			var centerX = _graphics.PreferredBackBufferWidth / 2;
+			var buttonY = font.MeasureString(helpScreenText[0][0]).Y * 4 + 74;
+			var newButton = new Button(0, 0, "Previous", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX - 1.5f * newButton.GetSize().X - 10, buttonY);
+			buttons.Add(newButton);
+			newButton = new Button(0, 0, "Play", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX - .5f * newButton.GetSize().X, buttonY);
+			buttons.Add(newButton);
+			newButton = new Button(0, 0, "Next", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX + .5f * newButton.GetSize().X + 10, buttonY);
+			buttons.Add(newButton);
+		}
 
 		private void GenerateWinScreen()
 		{
 			buttons = new();
+			var centerX = _graphics.PreferredBackBufferWidth / 2;
 			var buttonY = (font.MeasureString(winScreenText[0]).Y + 3) * winScreenText.Length
 				+ 60 + muleTexture.Height + 10;
-			var centerX = _graphics.PreferredBackBufferWidth / 2;
 			var newButton = new Button(0, 0, "Play Again", font);
 			newButton.SetTexture(buttonTexture);
 			newButton.SetPosition(centerX - newButton.GetSize().X - 10, buttonY);
@@ -685,6 +833,25 @@ namespace MelodiousMule
 			newButton.SetPosition(centerX + 10, buttonY);
 			buttons.Add(newButton);
 			allGameObjects.AddRange(buttons);
+		}
+
+		private void GenerateLoseScreen()
+		{
+			buttons = new();
+			var centerX = _graphics.PreferredBackBufferWidth / 2;
+			var buttonY = font.MeasureString(loseScreenText).Y + 15;
+			var newButton = new Button(0, 0, "Play Again", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX - 1.5f * newButton.GetSize().X - 10, buttonY);
+			buttons.Add(newButton);
+			newButton = new Button(0, 0, "How to Play", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX - .5f * newButton.GetSize().X, buttonY);
+			buttons.Add(newButton);
+			newButton = new Button(0, 0, "Exit", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX + .5f * newButton.GetSize().X + 10, buttonY);
+			buttons.Add(newButton);
 		}
 		protected override void Draw(GameTime gameTime)
 		{
@@ -755,6 +922,57 @@ namespace MelodiousMule
 				foreach (GameObject thisGameObject in allGameObjects)
 				{
 					thisGameObject.Draw(_spriteBatch);
+				}
+				_spriteBatch.End();
+			}
+			else if (currentGameState == GameState.HELP_SCREEN)
+			{
+				_spriteBatch.Begin();
+				_spriteBatch.Draw(
+					helpScreenIcons[helpScreenPage],
+					new Vector2(
+						_graphics.PreferredBackBufferWidth / 2
+							- helpScreenIcons[helpScreenPage].Width / 2,
+						10),
+					Color.White);
+				for (int i = 0; i < helpScreenText[helpScreenPage].Length; i++)
+				{
+					_spriteBatch.DrawString(
+						font,
+						helpScreenText[helpScreenPage][i],
+						new Vector2(
+							_graphics.PreferredBackBufferWidth / 2
+								- font.MeasureString(helpScreenText[helpScreenPage][i]).X / 2,
+							font.MeasureString(helpScreenText[helpScreenPage][i]).Y * i + 74),
+						Color.White);
+				}
+				for (int i = 0; i < buttons.Count; i++)
+				{
+					if (helpScreenPage == 0 && i == 0)
+					{
+						continue;
+					}
+					if (helpScreenPage == helpScreenIcons.Count - 1 && i == buttons.Count - 1)
+					{
+						continue;
+					}
+					buttons[i].Draw(_spriteBatch);
+				}
+				_spriteBatch.End();
+			}
+			else if (currentGameState == GameState.LOSE)
+			{
+				_spriteBatch.Begin();
+				_spriteBatch.DrawString(
+					font,
+					loseScreenText,
+					new Vector2(
+						_graphics.PreferredBackBufferWidth / 2 - font.MeasureString(loseScreenText).X / 2,
+						10),
+					Color.White);
+				foreach (Button thisButton in buttons)
+				{
+					thisButton.Draw(_spriteBatch);
 				}
 				_spriteBatch.End();
 			}
