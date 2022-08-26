@@ -51,7 +51,6 @@ namespace MelodiousMule
 		private readonly Hero theHero = new(0, 0);
 		private readonly Stairs theStairs = new(0, 0);
 		private readonly Bugle theBugle = new(0, 0);
-		private int heroStartRoom = 0;
 		private readonly int CURSOR_SIZE = 32;
 		private bool lastCanAttack = false;
 		private enum GameState { PREGAME, PLAYING, WIN, LOSE, HELP_SCREEN };
@@ -114,6 +113,7 @@ namespace MelodiousMule
 		private readonly float BUTTON_COOLDOWN = .25f;
 		private float buttonTimer;
 		private string loseScreenText = "You have died. The bugle remains unfound.";
+		private List<int> roomNumbers = Enumerable.Range(0, 9).ToList();
 
 		public MelodiousMule()
 		{
@@ -423,6 +423,7 @@ namespace MelodiousMule
 
 		private void GenerateMap()
 		{
+			roomNumbers = roomNumbers.OrderBy(x => RNG.Next()).ToList();
 			walls = new();
 			zombies = new();
 			allGameObjects.Add(theHero);
@@ -430,26 +431,20 @@ namespace MelodiousMule
 			GenerateRooms();
 			GenerateCorridors();
 			allGameObjects.AddRange(walls);
-			var roomSelect = RNG.Next(rooms.Count);
-			theHero.SetPosition(centerX[roomSelect] * TILE_SIZE, centerY[roomSelect] * TILE_SIZE);
-			heroStartRoom = roomSelect;
-			while (roomSelect == heroStartRoom)
-			{
-				roomSelect = RNG.Next(rooms.Count);
-			}
+			theHero.SetPosition(centerX[roomNumbers[0]] * TILE_SIZE, centerY[roomNumbers[0]] * TILE_SIZE);
 			if (currentLevel < LEVEL_COUNT - 1)
 			{
-				var stairsPosition = rooms[roomSelect].GetRandomPointInside(3);
+				var stairsPosition = rooms[roomNumbers[1]].GetRandomPointInside(4);
 				theStairs.SetPosition(stairsPosition.X * TILE_SIZE, stairsPosition.Y * TILE_SIZE);
 				allGameObjects.Add(theStairs);
 			}
 			else
 			{
-				var buglePosition = rooms[roomSelect].GetRandomPointInside(3);
+				var buglePosition = rooms[roomNumbers[1]].GetRandomPointInside(4);
 				theBugle.SetPosition(buglePosition.X * TILE_SIZE, buglePosition.Y * TILE_SIZE);
 				allGameObjects.Add(theBugle);
 			}
-			GeneratePotions(heroStartRoom, roomSelect);
+			GeneratePotions();
 			allGameObjects.AddRange(potions);
 			GenerateZombies();
 			allGameObjects.AddRange(zombies);
@@ -710,15 +705,9 @@ namespace MelodiousMule
 		{
 			Zombie zombie;
 			Point zombieLocation;
-			int roomSelect;
 			for (int i = 0; i < zombieDistribution[currentLevel][0]; i++)
 			{
-				roomSelect = heroStartRoom;
-				while (roomSelect == heroStartRoom)
-				{
-					roomSelect = RNG.Next(rooms.Count);
-				}
-				zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+				zombieLocation = rooms[roomNumbers[RNG.Next(1, roomNumbers.Count)]].GetRandomPointInside(3);
 				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
 					Zombie.Difficulty.EASY);
 				zombie.SetTexture(zombieEasyTexture);
@@ -726,12 +715,7 @@ namespace MelodiousMule
 			}
 			for (int i = 0; i < zombieDistribution[currentLevel][1]; i++)
 			{
-				roomSelect = heroStartRoom;
-				while (roomSelect == heroStartRoom)
-				{
-					roomSelect = RNG.Next(rooms.Count);
-				}
-				zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+				zombieLocation = rooms[roomNumbers[RNG.Next(1, roomNumbers.Count)]].GetRandomPointInside(3);
 				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
 					Zombie.Difficulty.MEDIUM);
 				zombie.SetTexture(zombieMediumTexture);
@@ -739,12 +723,7 @@ namespace MelodiousMule
 			}
 			for (int i = 0; i < zombieDistribution[currentLevel][2]; i++)
 			{
-				roomSelect = heroStartRoom;
-				while (roomSelect == heroStartRoom)
-				{
-					roomSelect = RNG.Next(rooms.Count);
-				}
-				zombieLocation = rooms[roomSelect].GetRandomPointInside(3);
+				zombieLocation = rooms[roomNumbers[RNG.Next(1, roomNumbers.Count)]].GetRandomPointInside(3);
 				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
 					Zombie.Difficulty.HARD);
 				zombie.SetTexture(zombieHardTexture);
@@ -752,29 +731,17 @@ namespace MelodiousMule
 			}
 		}
 
-		private void GeneratePotions(int heroRoom, int stairsOrBugleRoom)
+		private void GeneratePotions()
 		{
 			potions = new();
-			var strengthPotionRoom = heroRoom;
-			while (strengthPotionRoom == heroRoom || strengthPotionRoom == stairsOrBugleRoom)
-			{
-				strengthPotionRoom = RNG.Next(rooms.Count);
-			}
-			var healthPotionRoom = heroRoom;
-			while (healthPotionRoom == heroRoom
-				|| healthPotionRoom == stairsOrBugleRoom
-				|| healthPotionRoom == strengthPotionRoom)
-			{
-				healthPotionRoom = RNG.Next(rooms.Count);
-			}
-			var potionPosition = rooms[strengthPotionRoom].GetRandomPointInside();
+			var potionPosition = rooms[roomNumbers[2]].GetRandomPointInside();
 			var newPotion = new Potion(
 				potionPosition.X * TILE_SIZE,
 				potionPosition.Y * TILE_SIZE,
 				Potion.PotionType.STRENGTH);
 			newPotion.SetTexture(potionStrengthTexture);
 			potions.Add(newPotion);
-			potionPosition = rooms[healthPotionRoom].GetRandomPointInside();
+			potionPosition = rooms[roomNumbers[3]].GetRandomPointInside();
 			newPotion = new Potion(
 				potionPosition.X * TILE_SIZE,
 				potionPosition.Y * TILE_SIZE,
