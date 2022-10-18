@@ -45,11 +45,11 @@ namespace MelodiousMule
 				{
 					return MelodiousMule.GameState.PLAYING;
 				}
-				if (thisButtonClicked && thisButton.GetText() == "How to Play")
+				else if (thisButtonClicked && thisButton.GetText() == "How to Play")
 				{
 					return MelodiousMule.GameState.HELP_SCREEN;
 				}
-				if (thisButtonClicked && thisButton.GetText() == "Exit")
+				else if (thisButtonClicked && thisButton.GetText() == "Exit")
 				{
 					return MelodiousMule.GameState.EXIT;
 				}

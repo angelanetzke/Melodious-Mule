@@ -29,12 +29,12 @@ namespace MelodiousMule
 
 		protected override void Initialize()
 		{
-			currentGameState = GameState.LOSE;
+			currentGameState = GameState.PREGAME;
 			scenes.Add(new PregameScene(_graphics, Content));
 			scenes.Add(new PlayingScene(_graphics, Content));
 			scenes.Add(new WinScene(_graphics, Content));
 			scenes.Add(new LoseScene(_graphics, Content));
-			scenes.Add(new HelpScene(_graphics, Content));	
+			scenes.Add(new HelpScene(_graphics, Content));
 			base.Initialize();
 		}
 
@@ -49,22 +49,15 @@ namespace MelodiousMule
 
 		protected override void Update(GameTime gameTime)
 		{
-			if (Keyboard.GetState().IsKeyDown(Keys.Escape))
+			var keyState = Keyboard.GetState();
+			var mouseState = Mouse.GetState();
+			if (currentGameState == GameState.EXIT)
 			{
 				Exit();
 			}
 			else
 			{
-				var keyState = Keyboard.GetState();
-				var mouseState = Mouse.GetState();
-				if (currentGameState == GameState.EXIT)
-				{
-					Exit();
-				}
-				else
-				{
-					currentGameState = scenes[(int)currentGameState].Update(gameTime, mouseState, keyState);
-				}
+				currentGameState = scenes[(int)currentGameState].Update(gameTime, mouseState, keyState);
 			}
 			base.Update(gameTime);
 		}

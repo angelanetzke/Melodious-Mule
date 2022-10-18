@@ -19,6 +19,8 @@ namespace MelodiousMule
 		};
 		private readonly List<GameObject> allGameObjects = new();
 		private readonly List<Button> buttons = new();
+		private int textStartY = 0;
+		private readonly int BUFFER = 10;
 
 		public WinScene(GraphicsDeviceManager _graphics, ContentManager Content)
 		{
@@ -42,6 +44,10 @@ namespace MelodiousMule
 				{
 					return MelodiousMule.GameState.PLAYING;
 				}
+				else if (thisButtonClicked && thisButton.GetText() == "How to Play")
+				{
+					return MelodiousMule.GameState.HELP_SCREEN;
+				}
 				else if (thisButtonClicked && thisButton.GetText() == "Exit")
 				{
 					return MelodiousMule.GameState.EXIT;
@@ -62,14 +68,14 @@ namespace MelodiousMule
 				font,
 				winScreenText[i],
 					new Vector2((_graphics.PreferredBackBufferWidth - font.MeasureString(winScreenText[i]).X) / 2,
-						(font.MeasureString(winScreenText[i]).Y + 3) * i + 50),
+						textStartY + font.MeasureString(winScreenText[i]).Y * i),
 					Color.White);
 			}
 			batch.Draw(
 			muleTexture,
 			new Rectangle(
 					(_graphics.PreferredBackBufferWidth - muleTexture.Width) / 2,
-					(int)(font.MeasureString(winScreenText[0]).Y + 3) * winScreenText.Length + 60,
+					textStartY + (int)font.MeasureString(winScreenText[0]).Y * winScreenText.Length + BUFFER,
 					muleTexture.Width,
 					muleTexture.Height),
 					Color.White);
@@ -82,16 +88,26 @@ namespace MelodiousMule
 
 		private void GenerateObjects()
 		{
+			var allObjectsYSize =
+				(int)font.MeasureString(winScreenText[0]).Y * winScreenText.Length + BUFFER 
+				+ muleTexture.Height + BUFFER 
+				+ buttonTexture.Height;
+			textStartY = _graphics.PreferredBackBufferHeight / 2 - allObjectsYSize / 2;
 			var centerX = _graphics.PreferredBackBufferWidth / 2;
-			var buttonY = (font.MeasureString(winScreenText[0]).Y + 3) * winScreenText.Length
-				+ 60 + muleTexture.Height + 10;
+			var buttonY = textStartY 
+				+ (int)font.MeasureString(winScreenText[0]).Y * winScreenText.Length + BUFFER
+				+ muleTexture.Height + BUFFER;
 			var newButton = new Button(0, 0, "Play Again", font);
 			newButton.SetTexture(buttonTexture);
-			newButton.SetPosition(centerX - newButton.GetSize().X - 10, buttonY);
+			newButton.SetPosition(centerX - 1.5f * newButton.GetSize().X - 10, buttonY);
+			buttons.Add(newButton);
+			newButton = new Button(0, 0, "How to Play", font);
+			newButton.SetTexture(buttonTexture);
+			newButton.SetPosition(centerX - .5f * newButton.GetSize().X, buttonY);
 			buttons.Add(newButton);
 			newButton = new Button(0, 0, "Exit", font);
 			newButton.SetTexture(buttonTexture);
-			newButton.SetPosition(centerX + 10, buttonY);
+			newButton.SetPosition(centerX + .5f * newButton.GetSize().X + 10, buttonY);
 			buttons.Add(newButton);
 			allGameObjects.AddRange(buttons);
 		}
