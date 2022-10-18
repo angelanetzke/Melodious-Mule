@@ -14,13 +14,13 @@ namespace MelodiousMule
 		private Texture2D buttonTexture;
 		private readonly string loseScreenText = "You have died. The bugle remains unfound.";
 		private readonly List<Button> buttons = new();
-		private readonly PlayingScene thePlayingScene;
+		private int textStartY = 0;
+		private readonly int BUFFER = 10;
 
-		public LoseScene(GraphicsDeviceManager _graphics, ContentManager Content, PlayingScene thePlayingScene)
+		public LoseScene(GraphicsDeviceManager _graphics, ContentManager Content)
 		{
 			this._graphics = _graphics;
 			this.Content = Content;
-			this.thePlayingScene = thePlayingScene;
 		}
 		public override void LoadContent()
 		{
@@ -59,7 +59,7 @@ namespace MelodiousMule
 			loseScreenText,
 			new Vector2(
 					_graphics.PreferredBackBufferWidth / 2 - font.MeasureString(loseScreenText).X / 2,
-					10),
+					textStartY),
 				Color.White);
 			foreach (Button thisButton in buttons)
 			{
@@ -70,8 +70,11 @@ namespace MelodiousMule
 
 		private void GenerateObjects()
 		{
+			var allObjectsYSize =
+				(int)font.MeasureString(loseScreenText).Y + BUFFER + buttonTexture.Height;
+			textStartY = _graphics.PreferredBackBufferHeight / 2 - allObjectsYSize / 2;
 			var centerX = _graphics.PreferredBackBufferWidth / 2;
-			var buttonY = font.MeasureString(loseScreenText).Y + 15;
+			var buttonY = textStartY + (int)font.MeasureString(loseScreenText).Y+ BUFFER; ;
 			var newButton = new Button(0, 0, "Play Again", font);
 			newButton.SetTexture(buttonTexture);
 			newButton.SetPosition(centerX - 1.5f * newButton.GetSize().X - 10, buttonY);

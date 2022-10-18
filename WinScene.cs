@@ -19,13 +19,11 @@ namespace MelodiousMule
 		};
 		private readonly List<GameObject> allGameObjects = new();
 		private readonly List<Button> buttons = new();
-		private readonly PlayingScene thePlayingScene;
 
-		public WinScene(GraphicsDeviceManager _graphics, ContentManager Content, PlayingScene thePlayingScene)
+		public WinScene(GraphicsDeviceManager _graphics, ContentManager Content)
 		{
 			this._graphics = _graphics;
 			this.Content = Content;
-			this.thePlayingScene = thePlayingScene;			
 		}
 
 		public override void LoadContent()

@@ -8,7 +8,6 @@ namespace MelodiousMule
 {
 	internal class PregameScene : AbstractScene
 	{
-		private readonly int BUFFER = 10;
 		private readonly string[] startScreenText = new string[] {
 			"All your life you've heard of the legend of the Melodious Mule,",
 			"an extraordinary creature who could play a bugle. You always",
@@ -23,6 +22,7 @@ namespace MelodiousMule
 		private SpriteFont font;
 		private Texture2D buttonTexture;
 		private int textStartY = 0;
+		private readonly int BUFFER = 10;
 
 		public PregameScene(GraphicsDeviceManager _graphics, ContentManager Content)
 		{

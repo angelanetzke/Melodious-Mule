@@ -29,11 +29,11 @@ namespace MelodiousMule
 
 		protected override void Initialize()
 		{
-			currentGameState = GameState.PREGAME;
+			currentGameState = GameState.LOSE;
 			scenes.Add(new PregameScene(_graphics, Content));
 			scenes.Add(new PlayingScene(_graphics, Content));
-			scenes.Add(new WinScene(_graphics, Content, (PlayingScene)scenes[1]));
-			scenes.Add(new LoseScene(_graphics, Content, (PlayingScene)scenes[1]));
+			scenes.Add(new WinScene(_graphics, Content));
+			scenes.Add(new LoseScene(_graphics, Content));
 			scenes.Add(new HelpScene(_graphics, Content));	
 			base.Initialize();
 		}
