@@ -47,7 +47,7 @@ namespace MelodiousMule
 		private readonly Bugle theBugle = new(0, 0);
 		private readonly int CURSOR_SIZE = 32;
 		private bool lastCanAttack = false;
-		private int currentLevel = 8;
+		private int currentLevel = 1;
 		private readonly int LEVEL_COUNT = 10;
 		private readonly int[][] zombieDistribution = new int[][]
 			{
@@ -121,17 +121,18 @@ namespace MelodiousMule
 
 		public override MelodiousMule.GameState Update(GameTime gameTime, MouseState mouseState, KeyboardState keyState)
 		{
-			if (theHero.GetRectangle().Intersects(theBugle.GetRectangle()))
+			if (currentLevel == LEVEL_COUNT 
+				&& theHero.GetRectangle().Intersects(theBugle.GetRectangle()))
 			{
 				Reset();
 				Mouse.SetCursor(MouseCursor.Arrow);
 				return MelodiousMule.GameState.WIN;
 			}
-			if (currentLevel < LEVEL_COUNT - 1
+			if (currentLevel < LEVEL_COUNT
 				&& theHero.GetRectangle().Intersects(theStairs.GetRectangle()))
 			{
-				allGameObjects = new();
 				currentLevel++;
+				GenerateMap();
 			}
 			if (theHero.GetHP() <= 0)
 			{
@@ -174,7 +175,7 @@ namespace MelodiousMule
 			batch.Begin();
 			batch.DrawString(
 				font,
-				$"Level: {currentLevel + 1}"
+				$"Level: {currentLevel}"
 				+ $"   HP: {theHero.GetHP()}"
 				+ $"   Strength: {theHero.GetStrength()}",
 				new Vector2(10, 10),
@@ -199,7 +200,7 @@ namespace MelodiousMule
 			GenerateCorridors();
 			allGameObjects.AddRange(walls);
 			theHero.SetPosition(centerX[roomNumbers[0]] * TILE_SIZE, centerY[roomNumbers[0]] * TILE_SIZE);
-			if (currentLevel < LEVEL_COUNT - 1)
+			if (currentLevel < LEVEL_COUNT)
 			{
 				var stairsPosition = rooms[roomNumbers[1]].GetRandomPointInside(4);
 				theStairs.SetPosition(stairsPosition.X * TILE_SIZE, stairsPosition.Y * TILE_SIZE);
@@ -545,7 +546,7 @@ namespace MelodiousMule
 		{
 			Zombie zombie;
 			Point zombieLocation;
-			for (int i = 0; i < zombieDistribution[currentLevel][0]; i++)
+			for (int i = 0; i < zombieDistribution[currentLevel - 1][0]; i++)
 			{
 				zombieLocation = rooms[roomNumbers[RNG.Next(1, roomNumbers.Count)]].GetRandomPointInside(3);
 				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
@@ -553,7 +554,7 @@ namespace MelodiousMule
 				zombie.SetTexture(zombieEasyTexture);
 				zombies.Add(zombie);
 			}
-			for (int i = 0; i < zombieDistribution[currentLevel][1]; i++)
+			for (int i = 0; i < zombieDistribution[currentLevel - 1][1]; i++)
 			{
 				zombieLocation = rooms[roomNumbers[RNG.Next(1, roomNumbers.Count)]].GetRandomPointInside(3);
 				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
@@ -561,7 +562,7 @@ namespace MelodiousMule
 				zombie.SetTexture(zombieMediumTexture);
 				zombies.Add(zombie);
 			}
-			for (int i = 0; i < zombieDistribution[currentLevel][2]; i++)
+			for (int i = 0; i < zombieDistribution[currentLevel - 1][2]; i++)
 			{
 				zombieLocation = rooms[roomNumbers[RNG.Next(1, roomNumbers.Count)]].GetRandomPointInside(3);
 				zombie = new Zombie(zombieLocation.X * TILE_SIZE, zombieLocation.Y * TILE_SIZE,
@@ -592,7 +593,7 @@ namespace MelodiousMule
 		public void Reset()
 		{
 			theHero.Reset();
-			currentLevel = 0;
+			currentLevel = 1;
 			GenerateMap();
 			InitializeMouse();
 		}
