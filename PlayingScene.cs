@@ -176,7 +176,7 @@ namespace MelodiousMule
 			batch.DrawString(
 				font,
 				$"Level: {currentLevel}"
-				+ $"   HP: {theHero.GetHP()}"
+				+ $"   HP: {theHero.GetHP()} ({theHero.GetMaxHP()})"
 				+ $"   Strength: {theHero.GetStrength()}",
 				new Vector2(10, 10),
 				Color.White,
@@ -190,11 +190,10 @@ namespace MelodiousMule
 
 		private void GenerateMap()
 		{
-			allGameObjects = new();
+			allGameObjects = new() { theHero };
 			roomNumbers = roomNumbers.OrderBy(x => RNG.Next()).ToList();
 			walls = new();
 			zombies = new();
-			allGameObjects.Add(theHero);
 			ConnectMap();
 			GenerateRooms();
 			GenerateCorridors();

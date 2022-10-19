@@ -12,7 +12,7 @@ namespace MelodiousMule
 		private readonly int[] SPEED = new int[] { 50, 100, 150 };
 		private readonly int[] VISION = new int[] { 200, 250, 300 };
 		private readonly int[] DAMAGE = new int[] { 1, 10, 25 };
-		private readonly int[] MAX_HP = new int[] { 20, 50, 100};
+		private readonly int[] MAX_HP = new int[] { 50, 75, 100};
 		private int currentHP;
 		private readonly float ATTACK_COOLDOWN = 1.0f;
 		private float attackTimer;

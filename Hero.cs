@@ -9,15 +9,18 @@ namespace MelodiousMule
 	{
 		public enum AnimType { MOVE_N, MOVE_S, MOVE_W, MOVE_E, IDLE };
 		private AnimType currentAnimation = AnimType.IDLE;
-		private Animation[] animations = new Animation[5];
+		private readonly Animation[] animations = new Animation[5];
 		private readonly int SPEED = 200;
-		private readonly int START_HP = 10;
-		private readonly int INCREMENT_HP = 10;
+		private readonly int START_HP = 20;
+		private readonly int INCREMENT_HP = 20;
 		private int HP;
+		private int maxHP;
+		private readonly float HP_COOLDOWN = 2f;
+		private float HPTimer;
 		private readonly int ATTACK_RANGE = 225;
-		private readonly int START_STRENGTH = 5;
-		private readonly int INCREMENT_STRENGTH = 5;
-		private int strength;
+		private readonly int START_STRENGTH = 10;
+		private readonly int INCREMENT_STRENGTH = 10;
+		private int strength;		
 		private readonly float ATTACK_COOLDOWN = .25f;
 		private float attackTimer;
 		
@@ -25,6 +28,8 @@ namespace MelodiousMule
 		{
 			SetSize(32, 32);
 			HP = START_HP;
+			maxHP = START_HP;
+			HPTimer = HP_COOLDOWN + 1f;
 			strength = START_STRENGTH;
 			attackTimer = ATTACK_COOLDOWN + 1f;
 			animations[(int)AnimType.MOVE_N] = new Animation(5 * 32, 4, .2f, 32);
@@ -42,6 +47,7 @@ namespace MelodiousMule
 		public void TakeDamage(int damage)
 		{
 			HP -= damage;
+			HPTimer = 0f;
 		}
 
 		public int GetHP()
@@ -49,14 +55,20 @@ namespace MelodiousMule
 			return HP;
 		}
 
+		public int GetMaxHP()
+		{
+			return maxHP;
+		}
+
 		public int GetStrength()
 		{
 			return strength;
-		}
+		}		
 
 		public void IncreaseHP()
 		{
 			HP += INCREMENT_HP;
+			maxHP += INCREMENT_HP;
 		}
 
 		public void IncreaseStrength()
@@ -112,6 +124,8 @@ namespace MelodiousMule
 		public void Reset()
 		{
 			HP = START_HP;
+			maxHP = START_HP;
+			HPTimer = HP_COOLDOWN + 1f;
 			strength = START_STRENGTH;
 			attackTimer = ATTACK_COOLDOWN + 1f;
 		}
@@ -147,6 +161,12 @@ namespace MelodiousMule
 			}
 			animations[(int)currentAnimation].Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 			attackTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+			HPTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+			if (HPTimer >= HP_COOLDOWN && HP < maxHP)
+			{
+				HP++;
+				HPTimer = 0f;
+			}
 			return new Vector2(xTranslation, yTranslation);
 		}
 

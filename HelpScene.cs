@@ -36,8 +36,9 @@ namespace MelodiousMule
 			},
 			new string[]
 			{
-				"Health and strength potions.",
-				"There is one of each per level."
+				"Health and strength potions. There is one of each per level.",
+				"Health potions increase your current and maximum HP. HP increases over time.",
+				"Strength potions increase your attack power."
 			},
 			new string[]
 			{
