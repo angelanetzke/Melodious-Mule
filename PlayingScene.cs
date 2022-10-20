@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using Microsoft.Xna.Framework.Audio;
 
 namespace MelodiousMule
 {
@@ -62,6 +63,7 @@ namespace MelodiousMule
 				new int[] { 0, 12, 20},
 				new int[] { 0, 0, 40}
 			};
+		private SoundEffectInstance potionSound;
 
 		public PlayingScene(GraphicsDeviceManager _graphics, ContentManager Content)
 		{
@@ -117,6 +119,8 @@ namespace MelodiousMule
 			theBugle.SetTexture(bugleTexture);
 			potionHealthTexture = Content.Load<Texture2D>(@"Level\potion-health");
 			potionStrengthTexture = Content.Load<Texture2D>(@"Level\potion-strength");
+			potionSound = Content.Load<SoundEffect>(@"Audio\potion").CreateInstance();
+			potionSound.Volume = .8f;
 		}
 
 		public override MelodiousMule.GameState Update(GameTime gameTime, MouseState mouseState, KeyboardState keyState)
@@ -247,6 +251,7 @@ namespace MelodiousMule
 			{
 				if (theHero.GetRectangle().Intersects(thisPotion.GetRectangle()))
 				{
+					potionSound.Play();
 					if (thisPotion.GetPotionType() == Potion.PotionType.HEALTH)
 					{
 						theHero.IncreaseHP();
