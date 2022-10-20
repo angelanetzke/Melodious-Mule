@@ -1,7 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
+using System.Drawing.Text;
 
 namespace MelodiousMule
 {
@@ -23,8 +27,11 @@ namespace MelodiousMule
 		private int strength;		
 		private readonly float ATTACK_COOLDOWN = .25f;
 		private float attackTimer;
-		
-		public Hero(float x, float y) : base(x, y)
+		private readonly ContentManager content;
+		private SoundEffectInstance footstep = null;
+		private readonly Random RNG = new Random();
+
+		public Hero(float x, float y, ContentManager content) : base(x, y)
 		{
 			SetSize(32, 32);
 			HP = START_HP;
@@ -37,6 +44,7 @@ namespace MelodiousMule
 			animations[(int)AnimType.MOVE_W] = new Animation(10 * 32, 4, .2f, 32);
 			animations[(int)AnimType.MOVE_E] = new Animation(10 * 32, 4, .2f, 32);
 			animations[(int)AnimType.IDLE] = new Animation(4 * 32, 1, .2f, 32);
+			this.content = content;
 		}
 
 		public void SetCurrentAnimation(AnimType newAnimation)
@@ -133,6 +141,13 @@ namespace MelodiousMule
 		public Vector2 Update(KeyboardState keyState, List<GameObject> obstacles, GameTime gameTime,
 			float xTranslation, float yTranslation)
 		{
+			if (footstep == null)
+			{
+				footstep = content.Load<SoundEffect>(@"Audio\footstep").CreateInstance();
+				footstep.Volume = .5f;
+				footstep.IsLooped = true;
+			}
+			bool isHeroMoving = false;
 			SetCurrentAnimation(Hero.AnimType.IDLE);
 			float movement = (float)gameTime.ElapsedGameTime.TotalSeconds * SPEED;
 			if (keyState.IsKeyDown(Keys.A) && CanMoveLeft(movement, obstacles))
@@ -140,24 +155,37 @@ namespace MelodiousMule
 				SetCurrentAnimation(Hero.AnimType.MOVE_W);
 				SetPosition(GetPosition().X - movement, GetPosition().Y);
 				xTranslation += movement;
+				isHeroMoving = true;
 			}
 			if (keyState.IsKeyDown(Keys.D) && CanMoveRight(movement, obstacles))
 			{
 				SetCurrentAnimation(Hero.AnimType.MOVE_E);
 				SetPosition(GetPosition().X + movement, GetPosition().Y);
 				xTranslation -= movement;
+				isHeroMoving = true;
 			}
 			if (keyState.IsKeyDown(Keys.W) && CanMoveUp(movement, obstacles))
 			{
 				SetCurrentAnimation(Hero.AnimType.MOVE_N);
 				SetPosition(GetPosition().X, GetPosition().Y - movement);
 				yTranslation += movement;
+				isHeroMoving = true;
 			}
 			if (keyState.IsKeyDown(Keys.S) && CanMoveDown(movement, obstacles))
 			{
 				SetCurrentAnimation(Hero.AnimType.MOVE_S);
 				SetPosition(GetPosition().X, GetPosition().Y + movement);
 				yTranslation -= movement;
+				isHeroMoving = true;
+			}
+			if (isHeroMoving)
+			{
+				footstep.Pitch = (float)(.5 * RNG.NextDouble() + .25);
+				footstep.Play();
+			}
+			else
+			{
+				footstep.Stop();
 			}
 			animations[(int)currentAnimation].Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 			attackTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;

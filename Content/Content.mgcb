@@ -13,6 +13,12 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/footstep.ogg
+/importer:OggImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/footstep.ogg
+
 #begin HelpScreen/helpscreen01.png
 /importer:TextureImporter
 /processor:TextureProcessor

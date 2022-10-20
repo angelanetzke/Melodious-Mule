@@ -42,7 +42,7 @@ namespace MelodiousMule
 		private float yTranslation;
 		private readonly List<Room> rooms = new();
 		private readonly int ROOM_COUNT = 9;
-		private readonly Hero theHero = new(0, 0);
+		private readonly Hero theHero;
 		private readonly Stairs theStairs = new(0, 0);
 		private readonly Bugle theBugle = new(0, 0);
 		private readonly int CURSOR_SIZE = 32;
@@ -67,7 +67,7 @@ namespace MelodiousMule
 		{
 			this._graphics = _graphics;
 			this.Content = Content;
-			
+			theHero = new(0, 0, this.Content);
 			for (int i = 0; i < ROOM_COUNT; i++)
 			{
 				rooms.Add(new Room());
