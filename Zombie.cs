@@ -14,20 +14,18 @@ namespace MelodiousMule
 		private readonly int[] DAMAGE = new int[] { 1, 10, 25 };
 		private readonly int[] MAX_HP = new int[] { 50, 75, 100};
 		private int currentHP;
-		private readonly float ATTACK_COOLDOWN = 1.0f;
-		private float attackTimer;
-		private readonly float DAMAGE_EFFECT_COOLDOWN = .25f;
-		private float damageEffectTimer;
+		private static readonly float ATTACK_COOLDOWN = 1.0f;
+		private float attackTimer = ATTACK_COOLDOWN + 1f;
+		private static readonly float DAMAGE_EFFECT_COOLDOWN = .25f;
+		private float damageEffectTimer = DAMAGE_EFFECT_COOLDOWN + 1f;
 		public enum AnimType { MOVE_N, MOVE_S, MOVE_W, MOVE_E, IDLE };
 		private AnimType currentAnimation = AnimType.IDLE;
-		private Animation[] animations = new Animation[5];
+		private readonly Animation[] animations = new Animation[5];
 		public Zombie(float x, float y, Difficulty difficulty) : base(x, y)
 		{
 			this.difficulty = difficulty;
 			SetSize(30, 35);
 			currentHP = MAX_HP[(int)difficulty];
-			attackTimer = ATTACK_COOLDOWN + 1f;
-			damageEffectTimer = DAMAGE_EFFECT_COOLDOWN + 1f;
 			animations[(int)AnimType.MOVE_N] = new Animation(
 				9 * (int)Math.Round(GetSize().X), 4, .2f, (int)Math.Round(GetSize().X));
 			animations[(int)AnimType.MOVE_S] = new Animation(

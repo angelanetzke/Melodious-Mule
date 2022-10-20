@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Drawing.Text;
 
 namespace MelodiousMule
 {
@@ -28,8 +27,12 @@ namespace MelodiousMule
 		private readonly float ATTACK_COOLDOWN = .25f;
 		private float attackTimer;
 		private readonly ContentManager content;
-		private SoundEffectInstance footstep = null;
-		private readonly Random RNG = new Random();
+		private SoundEffectInstance footstepSound = null;
+		private SoundEffectInstance hitSound = null;
+		private SoundEffectInstance damageSound = null;
+		private readonly Random RNG = new();
+		private static readonly float DAMAGE_EFFECT_COOLDOWN = .25f;
+		private float damageEffectTimer = DAMAGE_EFFECT_COOLDOWN + 1f;
 
 		public Hero(float x, float y, ContentManager content) : base(x, y)
 		{
@@ -54,8 +57,15 @@ namespace MelodiousMule
 
 		public void TakeDamage(int damage)
 		{
+			if (damageSound == null)
+			{
+				damageSound = content.Load<SoundEffect>(@"Audio\damage").CreateInstance();
+				damageSound.Volume = .9f;
+			}
+			damageSound.Play();
 			HP -= damage;
 			HPTimer = 0f;
+			damageEffectTimer = 0f;
 		}
 
 		public int GetHP()
@@ -111,13 +121,20 @@ namespace MelodiousMule
 
 		public List<Zombie> Attack(List<Zombie> enemies, float mouseX, float mouseY)
 		{
+			if (hitSound == null)
+			{
+				hitSound = content.Load<SoundEffect>(@"Audio\hit").CreateInstance();
+				hitSound.Volume = .9f;
+			}
 			List<Zombie> defeatedEnemies = new();
+			bool hitSuccess = false;
 			if (attackTimer > ATTACK_COOLDOWN)
 			{
 				foreach (Zombie thisEnemy in enemies)
 				{
 					if (thisEnemy.GetRectangle().Contains(mouseX, mouseY))
 					{
+						hitSuccess = true;
 						if (thisEnemy.TakeDamage(strength) <= 0)
 						{
 							defeatedEnemies.Add(thisEnemy);							
@@ -125,6 +142,10 @@ namespace MelodiousMule
 						attackTimer = 0f;
 					}
 				}
+			}
+			if (hitSuccess)
+			{
+				hitSound.Play();
 			}
 			return defeatedEnemies;
 		}
@@ -141,11 +162,11 @@ namespace MelodiousMule
 		public Vector2 Update(KeyboardState keyState, List<GameObject> obstacles, GameTime gameTime,
 			float xTranslation, float yTranslation)
 		{
-			if (footstep == null)
+			if (footstepSound == null)
 			{
-				footstep = content.Load<SoundEffect>(@"Audio\footstep").CreateInstance();
-				footstep.Volume = .5f;
-				footstep.IsLooped = true;
+				footstepSound = content.Load<SoundEffect>(@"Audio\footstep").CreateInstance();
+				footstepSound.Volume = .5f;
+				footstepSound.IsLooped = true;
 			}
 			bool isHeroMoving = false;
 			SetCurrentAnimation(Hero.AnimType.IDLE);
@@ -180,15 +201,16 @@ namespace MelodiousMule
 			}
 			if (isHeroMoving)
 			{
-				footstep.Pitch = (float)(.5 * RNG.NextDouble() + .25);
-				footstep.Play();
+				footstepSound.Pitch = (float)(.5 * RNG.NextDouble() + .25);
+				footstepSound.Play();
 			}
 			else
 			{
-				footstep.Stop();
+				footstepSound.Stop();
 			}
 			animations[(int)currentAnimation].Update((float)gameTime.ElapsedGameTime.TotalSeconds);
 			attackTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+			damageEffectTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 			HPTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 			if (HPTimer >= HP_COOLDOWN && HP < maxHP)
 			{
@@ -200,6 +222,11 @@ namespace MelodiousMule
 
 		public override void Draw(SpriteBatch batch)
 		{
+			Color drawColor = Color.White;
+			if (damageEffectTimer < DAMAGE_EFFECT_COOLDOWN)
+			{
+				drawColor = Color.Red;
+			}
 			SpriteEffects effects;
 			if (currentAnimation == AnimType.MOVE_W)
 			{
@@ -213,7 +240,7 @@ namespace MelodiousMule
 				GetTexture(),
 				GetRectangle(),
 				animations[(int)currentAnimation].GetSourceRectangle(),
-				Color.White,
+				drawColor,
 				0,
 				new Vector2(0, 0),
 				effects,

@@ -13,11 +13,23 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Audio/damage.ogg
+/importer:OggImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/damage.ogg
+
 #begin Audio/footstep.ogg
 /importer:OggImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:Audio/footstep.ogg
+
+#begin Audio/hit.ogg
+/importer:OggImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Audio/hit.ogg
 
 #begin HelpScreen/helpscreen01.png
 /importer:TextureImporter
