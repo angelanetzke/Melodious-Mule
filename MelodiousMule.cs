@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Media;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -12,7 +13,11 @@ namespace MelodiousMule
 		private SpriteBatch _spriteBatch;
 		public enum GameState { PREGAME, PLAYING, WIN, LOSE, HELP_SCREEN, EXIT };
 		private GameState currentGameState;
+		private GameState lastGameState;
 		private readonly List<AbstractScene> scenes = new();
+		private Song themeSong;
+		private Song loseSong;
+		private bool hasSongStarted = false;
 
 		public MelodiousMule()
 		{
@@ -30,11 +35,13 @@ namespace MelodiousMule
 		protected override void Initialize()
 		{
 			currentGameState = GameState.PREGAME;
+			lastGameState = GameState.PREGAME;
 			scenes.Add(new PregameScene(_graphics, Content));
 			scenes.Add(new PlayingScene(_graphics, Content));
 			scenes.Add(new WinScene(_graphics, Content));
 			scenes.Add(new LoseScene(_graphics, Content));
 			scenes.Add(new HelpScene(_graphics, Content));
+			MediaPlayer.Volume = .45f;
 			base.Initialize();
 		}
 
@@ -44,11 +51,30 @@ namespace MelodiousMule
 			{
 				thisScene.LoadContent();
 			}
+			themeSong = Content.Load<Song>(@"Audio\song");
+			loseSong = Content.Load<Song>(@"Audio\lose");
 			_spriteBatch = new SpriteBatch(GraphicsDevice);
 		}
 
 		protected override void Update(GameTime gameTime)
 		{
+			if (!hasSongStarted)
+			{
+				switch (currentGameState)
+				{
+					case GameState.PREGAME:
+					case GameState.WIN:
+						MediaPlayer.Play(themeSong);
+						break;
+					case GameState.LOSE:
+						MediaPlayer.Play(loseSong);
+						break;
+					default:
+						MediaPlayer.Stop();
+						break;
+				}
+				hasSongStarted = true;
+			}
 			var keyState = Keyboard.GetState();
 			var mouseState = Mouse.GetState();
 			if (currentGameState == GameState.EXIT)
@@ -57,7 +83,12 @@ namespace MelodiousMule
 			}
 			else
 			{
+				lastGameState = currentGameState;
 				currentGameState = scenes[(int)currentGameState].Update(gameTime, mouseState, keyState);
+				if (lastGameState != currentGameState)
+				{
+					hasSongStarted = false;
+				}
 			}
 			base.Update(gameTime);
 		}

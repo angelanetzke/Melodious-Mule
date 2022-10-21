@@ -14,16 +14,16 @@ namespace MelodiousMule
 		private AnimType currentAnimation = AnimType.IDLE;
 		private readonly Animation[] animations = new Animation[5];
 		private readonly int SPEED = 200;
-		private readonly int START_HP = 20;
+		private static readonly int START_HP = 20;
 		private readonly int INCREMENT_HP = 20;
-		private int HP;
-		private int maxHP;
-		private readonly float HP_COOLDOWN = 2f;
-		private float HPTimer;
+		private int HP = START_HP;
+		private int maxHP = START_HP;
+		private static readonly float HP_COOLDOWN = 2f;
+		private float HPTimer = HP_COOLDOWN + 1f;
 		private readonly int ATTACK_RANGE = 225;
-		private readonly int START_STRENGTH = 10;
+		private static readonly int START_STRENGTH = 10;
 		private readonly int INCREMENT_STRENGTH = 10;
-		private int strength;		
+		private int strength = START_STRENGTH;		
 		private readonly float ATTACK_COOLDOWN = .25f;
 		private float attackTimer;
 		private readonly ContentManager content;
@@ -37,10 +37,6 @@ namespace MelodiousMule
 		public Hero(float x, float y, ContentManager content) : base(x, y)
 		{
 			SetSize(32, 32);
-			HP = START_HP;
-			maxHP = START_HP;
-			HPTimer = HP_COOLDOWN + 1f;
-			strength = START_STRENGTH;
 			attackTimer = ATTACK_COOLDOWN + 1f;
 			animations[(int)AnimType.MOVE_N] = new Animation(5 * 32, 4, .2f, 32);
 			animations[(int)AnimType.MOVE_S] = new Animation(0, 4, .2f, 32);
@@ -165,7 +161,7 @@ namespace MelodiousMule
 			if (footstepSound == null)
 			{
 				footstepSound = content.Load<SoundEffect>(@"Audio\footstep").CreateInstance();
-				footstepSound.Volume = .5f;
+				footstepSound.Volume = .6f;
 				footstepSound.IsLooped = true;
 			}
 			bool isHeroMoving = false;
@@ -218,6 +214,11 @@ namespace MelodiousMule
 				HPTimer = 0f;
 			}
 			return new Vector2(xTranslation, yTranslation);
+		}
+
+		public void Silence()
+		{
+			footstepSound.Stop();
 		}
 
 		public override void Draw(SpriteBatch batch)

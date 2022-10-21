@@ -31,11 +31,23 @@
 /processorParam:Quality=Best
 /build:Audio/hit.ogg
 
+#begin Audio/lose.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/lose.ogg
+
 #begin Audio/potion.ogg
 /importer:OggImporter
 /processor:SoundEffectProcessor
 /processorParam:Quality=Best
 /build:Audio/potion.ogg
+
+#begin Audio/song.ogg
+/importer:OggImporter
+/processor:SongProcessor
+/processorParam:Quality=Best
+/build:Audio/song.ogg
 
 #begin HelpScreen/helpscreen01.png
 /importer:TextureImporter

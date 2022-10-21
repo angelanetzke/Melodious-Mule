@@ -128,6 +128,7 @@ namespace MelodiousMule
 			if (currentLevel == LEVEL_COUNT 
 				&& theHero.GetRectangle().Intersects(theBugle.GetRectangle()))
 			{
+				theHero.Silence();
 				Reset();
 				Mouse.SetCursor(MouseCursor.Arrow);
 				return MelodiousMule.GameState.WIN;
@@ -140,6 +141,7 @@ namespace MelodiousMule
 			}
 			if (theHero.GetHP() <= 0)
 			{
+				theHero.Silence();
 				Reset();
 				Mouse.SetCursor(MouseCursor.Arrow);
 				return MelodiousMule.GameState.LOSE;
