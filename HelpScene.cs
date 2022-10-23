@@ -46,7 +46,7 @@ namespace MelodiousMule
 				"Once you leave a level, there is no going back."
 			}
 		};
-		private List<Texture2D> helpScreenIcons = new();
+		private readonly List<Texture2D> helpScreenIcons = new();
 		private int helpScreenPage = 0;
 		private readonly float BUTTON_COOLDOWN = .25f;
 		private float buttonTimer;

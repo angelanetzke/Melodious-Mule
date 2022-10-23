@@ -9,6 +9,8 @@ namespace MelodiousMule
 	internal class PregameScene : AbstractScene
 	{
 		private readonly string[] startScreenText = new string[] {
+			"~~~ The Legend of the Melodious Mule ~~~",
+			"",
 			"All your life you've heard of the legend of the Melodious Mule,",
 			"an extraordinary creature who could play a bugle. You always",
 			"wondered whether the legend was true. You set out on a quest",
